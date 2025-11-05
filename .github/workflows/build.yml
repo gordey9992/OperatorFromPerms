@@ -1,4 +1,4 @@
-name: Build OperatorFromPerms v2
+name: Build OperatorFromPerms
 
 on:
   push:
@@ -7,259 +7,206 @@ on:
     branches: [ "main", "master" ]
   workflow_dispatch:
     inputs:
-      enable_tests:
-        description: 'Запустить тесты'
-        required: false
-        default: 'false'
+      build_type:
+        description: 'Тип сборки'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+        - 'release'
+        - 'snapshot'
+        - 'test'
 
 env:
   PLUGIN_NAME: OperatorFromPerms
-  PLUGIN_VERSION: 2.0.0
   JAVA_VERSION: '21'
 
 jobs:
-  security-check:
-    name: Security Check
+  validate:
+    name: Проверка проекта
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        
-      - name: Security audit
-        run: |
-          echo "Security check..."
-          echo "Checking structure..."
-          [ -f "src/main/java/com/gordey9992/operatorfromperms/AuthManager.java" ] && echo "AuthManager found" || echo "AuthManager missing"
-          echo "Checking password hashing..."
-          grep -q "SHA-256" src/main/java/com/gordey9992/operatorfromperms/AuthManager.java && echo "Passwords are hashed" || echo "Check password hashing"
+    - name: Получить код
+      uses: actions/checkout@v4
 
-  build:
-    name: Build Plugin
-    runs-on: ubuntu-latest
-    needs: security-check
-    
-    strategy:
-      matrix:
-        java: [ '21' ]
-        os: [ 'ubuntu-latest' ]
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        
-      - name: Setup JDK ${{ matrix.java }}
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ matrix.java }}
-          distribution: 'temurin'
-          cache: 'maven'
-          
-      - name: Build info
-        run: |
-          echo "Building: ${{ env.PLUGIN_NAME }} v${{ env.PLUGIN_VERSION }}"
-          echo "OS: ${{ matrix.os }}"
-          echo "Java: ${{ matrix.java }}"
-          echo "Time: $(date)"
-          echo "Commit: ${{ github.sha }}"
-          
-      - name: Clean previous builds
-        run: mvn -B clean
-        
-      - name: Compile code
-        run: mvn -B compile
-        
-      - name: Check dependencies
-        run: mvn -B dependency:tree
-        
-      - name: Build JAR
-        run: mvn -B package -DskipTests
-        
-      - name: Analyze build
-        run: |
-          JAR_FILE=$(find target -name "*.jar" ! -name "*-javadoc.jar" ! -name "original-*.jar" | head -1)
-          if [ -f "$JAR_FILE" ]; then
-            echo "BUILD SUCCESSFUL!"
-            echo "File: $(basename $JAR_FILE)"
-            echo "Size: $(du -h $JAR_FILE | cut -f1)"
-            echo "MD5: $(md5sum $JAR_FILE | cut -d' ' -f1)"
-            echo "Plugin info:"
-            unzip -p "$JAR_FILE" plugin.yml | grep -E "(name|version|main|description)" | while read line; do
-              echo "   $line"
-            done
+    - name: Проверить структуру
+      run: |
+        echo "Проверка файлов проекта..."
+        files=("pom.xml" "src/main/resources/plugin.yml" "src/main/resources/config.yml" "src/main/resources/messages.yml")
+        for file in "${files[@]}"; do
+          if [ -f "$file" ]; then
+            echo "OK: $file"
           else
-            echo "Build failed!"
+            echo "ERROR: $file не найден"
             exit 1
           fi
+        done
 
-  quality:
-    name: Quality Control
+        echo "Проверка исходного кода..."
+        if [ -d "src/main/java/com/gordey9992/operatorfromperms" ]; then
+          java_files=$(find src/main/java/com/gordey9992/operatorfromperms -name "*.java" | wc -l)
+          echo "Найдено Java файлов: $java_files"
+        else
+          echo "ERROR: Папка с исходным кодом не найдена"
+          exit 1
+        fi
+
+  build:
+    name: Сборка плагина
+    runs-on: ubuntu-latest
+    needs: validate
+
+    steps:
+    - name: Получить код
+      uses: actions/checkout@v4
+
+    - name: Установить Java ${{ env.JAVA_VERSION }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: 'temurin'
+        cache: 'maven'
+
+    - name: Собрать проект
+      run: mvn -B clean package -DskipTests
+
+    - name: Проверить результат
+      run: |
+        jar_file=$(find target -name "*.jar" ! -name "*-javadoc.jar" ! -name "original-*.jar" | head -1)
+        if [ -f "$jar_file" ]; then
+          echo "Сборка успешна"
+          echo "Файл: $jar_file"
+          echo "Размер: $(du -h "$jar_file" | cut -f1)"
+        else
+          echo "Сборка не удалась"
+          exit 1
+        fi
+
+  test:
+    name: Тестирование
     runs-on: ubuntu-latest
     needs: build
-    
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Получить код
+      uses: actions/checkout@v4
+
+    - name: Установить Java ${{ env.JAVA_VERSION }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: 'temurin'
+
+    - name: Запустить тесты
+      run: mvn -B test
+
+  quality:
+    name: Проверка качества
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Получить код
+      uses: actions/checkout@v4
+
+    - name: Проверить код
+      run: |
+        echo "Проверка качества кода..."
+        echo "Количество Java файлов: $(find src/main/java -name "*.java" | wc -l)"
+        echo "Количество YAML файлов: $(find src/main/resources -name "*.yml" | wc -l)"
         
-      - name: Setup JDK 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          
-      - name: Code analysis
-        run: |
-          echo "Code quality analysis..."
-          echo "Statistics:"
-          find src/main/java -name "*.java" | wc -l | xargs echo "Java files:"
-          find src/main/resources -name "*.yml" | wc -l | xargs echo "YAML files:"
-          echo ""
-          echo "Syntax check..."
-          mvn -B compile > /dev/null 2>&1 && echo "Syntax correct" || echo "Compilation errors"
+        echo "Поиск TODO и FIXME:"
+        find src/main/java -name "*.java" -exec grep -l "TODO\|FIXME" {} \; | while read file; do
+          echo "Найдено в: $file"
+        done
 
   artifacts:
-    name: Create Release
+    name: Создание артефактов
     runs-on: ubuntu-latest
     needs: [build, quality]
-    if: github.ref == 'refs/heads/main'
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        
-      - name: Setup JDK 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          
-      - name: Final build
-        run: mvn -B clean package -DskipTests
-        
-      - name: Prepare artifacts
-        run: |
-          mkdir -p release
-          JAR_FILE=$(find target -name "*.jar" ! -name "*-javadoc.jar" ! -name "original-*.jar" | head -1)
-          cp "$JAR_FILE" release/
-          cp -r src/main/resources/*.yml release/ 2>/dev/null || echo "Configs copied"
-          
-          # Create README for release
-          cat > release/README.md << 'EOF'
-# OperatorFromPerms v2.0.0
+    - name: Получить код
+      uses: actions/checkout@v4
 
-## New features:
-- Authorization system "Koshara 3000"
-- Registration and login with passwords
-- "Remember me" function for 24 hours
-- Full integration with LuckPerms
+    - name: Установить Java ${{ env.JAVA_VERSION }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: 'temurin'
 
-## Authorization commands:
-- /register <password> <confirm> - registration
-- /login <password> - login  
-- /remember - remember for 24 hours
+    - name: Финальная сборка
+      run: mvn -B clean package -DskipTests
 
-## Management commands:
-- /opf reload - reload configs
-- /opf check <player> - check status
+    - name: Подготовить артефакты
+      run: |
+        mkdir -p artifacts
+        jar_file=$(find target -name "*.jar" ! -name "*-javadoc.jar" ! -name "original-*.jar" | head -1)
+        cp "$jar_file" artifacts/
+        cp src/main/resources/*.yml artifacts/ 2>/dev/null || echo "Конфиги скопированы"
 
-## Developers:
+        cat > artifacts/info.txt << 'EOF'
+OperatorFromPerms - Собранный плагин
+Версия: 2.0.0
+Дата сборки: $(date)
+Коммит: ${{ github.sha }}
+Ветка: ${{ github.ref_name }}
+
+Функции:
+- Выдача прав оператора через LuckPerms
+- Система авторизации
+- Команды управления
+
+Разработчики:
 - gordey25690
 - DeepSeek
-- With idea from Koshara 3000
-
-> Built: $(date)
-> Commit: ${{ github.sha }}
 EOF
 
-      - name: Create release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: release/*
-          generate_release_notes: true
-          tag_name: v2.0.0-${{ github.run_number }}
-          name: "OperatorFromPerms v2.0.0 Build ${{ github.run_number }}"
-          body: |
-            New version with authorization system!
+    - name: Загрузить артефакты
+      uses: actions/upload-artifact@v4
+      with:
+        name: OperatorFromPerms-Build-${{ github.run_number }}
+        path: artifacts/
+        retention-days: 30
 
-            ### What's new:
-            - Authorization system "Koshara 3000"
-            - Registration (/reg, /register)
-            - Login (/login, /log)  
-            - Remember me for 24 hours
-            - Full integration with LuckPerms
-
-            ### Commands:
-            ```
-            # Authorization
-            /register <password> <confirm>
-            /login <password>
-            /remember
-
-            # Management
-            /opf reload
-            /opf check <player>
-            ```
-
-            ### Developers:
-            - gordey25690
-            - DeepSeek
-            - With idea from Koshara 3000
-
-  deploy:
-    name: Deploy
+  release:
+    name: Создание релиза
     runs-on: ubuntu-latest
-    needs: artifacts
-    if: github.ref == 'refs/heads/main'
-    
+    needs: [build, test, quality, artifacts]
+    if: github.ref == 'refs/heads/main' && inputs.build_type == 'release'
+
     steps:
-      - name: Success notification
-        run: |
-          echo "BUILD #${{ github.run_number }} COMPLETED!"
-          echo "RELEASE CREATED: v2.0.0-${{ github.run_number }}"
-          echo "Link: https://github.com/${{ github.repository }}/releases/tag/v2.0.0-${{ github.run_number }}"
-          echo ""
-          echo "NEW FEATURES:"
-          echo "Authorization system Koshara 3000"
-          echo "Registration and login"
-          echo "Remember me for 24 hours"
-          echo "Full integration with LuckPerms"
+    - name: Создать релиз
+      uses: softprops/action-gh-release@v1
+      with:
+        files: artifacts/*
+        generate_release_notes: true
+        tag_name: v2.0.0-${{ github.run_number }}
+        name: "OperatorFromPerms v2.0.0"
 
-  status:
-    name: Final Report
+  report:
+    name: Итоговый отчет
     runs-on: ubuntu-latest
-    needs: [security-check, build, quality, artifacts, deploy]
+    needs: [validate, build, test, quality, artifacts]
     if: always()
-    
+
     steps:
-      - name: Generate report
-        run: |
-          echo "# BUILD REPORT #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## Results:" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Stage | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Security Check | ${{ needs.security-check.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Build Plugin | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Quality Control | ${{ needs.quality.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Create Release | ${{ needs.artifacts.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Deploy | ${{ needs.deploy.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          if [ "${{ needs.artifacts.result }}" == "success" ]; then
-            echo "## SUCCESS!" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**OperatorFromPerms v2.0.0** successfully built and ready!" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### New features:" >> $GITHUB_STEP_SUMMARY
-            echo "- Authorization system \"Koshara 3000\"" >> $GITHUB_STEP_SUMMARY
-            echo "- Registration (/reg, /register)" >> $GITHUB_STEP_SUMMARY
-            echo "- Login (/login, /log)" >> $GITHUB_STEP_SUMMARY
-            echo "- Remember me for 24 hours" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### Download:" >> $GITHUB_STEP_SUMMARY
-            echo "Go to [Releases](https://github.com/${{ github.repository }}/releases) to download plugin" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "## Issues detected" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Check logs for diagnostics" >> $GITHUB_STEP_SUMMARY
-          fi
+    - name: Создать отчет
+      run: |
+        echo "Результаты сборки #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Этап | Статус |" >> $GITHUB_STEP_SUMMARY
+        echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Проверка проекта | ${{ needs.validate.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Сборка плагина | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Тестирование | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Проверка качества | ${{ needs.quality.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Создание артефактов | ${{ needs.artifacts.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        if [ "${{ needs.artifacts.result }}" == "success" ]; then
+          echo "Сборка завершена успешно!" >> $GITHUB_STEP_SUMMARY
+          echo "Артефакты готовы к скачиванию." >> $GITHUB_STEP_SUMMARY
+        else
+          echo "В процессе сборки возникли ошибки." >> $GITHUB_STEP_SUMMARY
+        fi
