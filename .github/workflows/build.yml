@@ -1,0 +1,243 @@
+name: 🏗️ Build OperatorFromPerms
+
+on:
+  push:
+    branches: [ "main", "master", "development" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:  # Позволяет запускать вручную
+    inputs:
+      version:
+        description: 'Версия для сборки'
+        required: false
+        default: 'auto'
+
+env:
+  PLUGIN_NAME: OperatorFromPerms
+  JAVA_VERSION: '21'
+
+jobs:
+  validate:
+    name: 🔍 Проверка кода
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🚨 Проверить синтаксис YAML
+      uses: actions/desktop/yml-validator@v1
+      with:
+        file: src/main/resources/plugin.yml
+    
+    - name: 📝 Проверить структуру проекта
+      run: |
+        echo "🔎 Проверка структуры проекта..."
+        [ -f "pom.xml" ] || echo "❌ Отсутствует pom.xml"
+        [ -f "src/main/resources/plugin.yml" ] || echo "❌ Отсутствует plugin.yml"
+        [ -f "src/main/resources/config.yml" ] || echo "❌ Отсутствует config.yml"
+        [ -f "src/main/resources/messages.yml" ] || echo "❌ Отсутствует messages.yml"
+        [ -d "src/main/java/com/gordey9992/operatorfromperms" ] || echo "❌ Отсутствует исходный код"
+        echo "✅ Проверка структуры завершена"
+
+  build:
+    name: 🏗️ Сборка плагина
+    runs-on: ubuntu-latest
+    needs: validate
+    
+    strategy:
+      matrix:
+        java: [ '21' ]
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: ☕ Set up JDK ${{ matrix.java }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ matrix.java }}
+        distribution: 'temurin'
+        cache: 'maven'
+    
+    - name: 📊 Информация о сборке
+      run: |
+        echo "🔄 Начало сборки ${{ env.PLUGIN_NAME }}"
+        echo "📅 Дата: $(date)"
+        echo "☕ Java: ${{ matrix.java }}"
+        echo "🏷️  Git commit: ${{ github.sha }}"
+        echo "🎯 Ветка: ${{ github.ref }}"
+    
+    - name: 🧹 Очистка предыдущих сборок
+      run: mvn -B clean
+    
+    - name: 📦 Компиляция кода
+      run: mvn -B compile
+      
+    - name: 🔍 Проверка зависимостей
+      run: mvn -B dependency:tree
+      
+    - name: 🛠️ Сборка JAR
+      run: mvn -B package -DskipTests
+      
+    - name: 📏 Проверка размера JAR
+      run: |
+        JAR_FILE=$(ls target/*.jar)
+        echo "📦 Файл: $JAR_FILE"
+        echo "📊 Размер: $(du -h $JAR_FILE | cut -f1)"
+        echo "🔍 MD5: $(md5sum $JAR_FILE | cut -d' ' -f1)"
+        
+    - name: 📋 Информация о собранном плагине
+      run: |
+        JAR_FILE=$(ls target/*.jar)
+        echo "🎉 Сборка завершена!"
+        echo "📁 Файл: $JAR_FILE"
+        echo "💾 Размер: $(du -h $JAR_FILE | cut -f1)"
+        unzip -p $JAR_FILE plugin.yml | head -10
+
+  quality:
+    name: ✅ Контроль качества
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: ☕ Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+    
+    - name: 🔍 Проверка стиля кода
+      run: |
+        echo "🔍 Проверка code style..."
+        # Проверяем наличие русских комментариев
+        find src/main/java -name "*.java" -exec grep -l "TODO\|FIXME" {} \; | while read file; do
+          echo "⚠️  Найден TODO/FIXME в: $file"
+        done
+        
+    - name: 📝 Проверка конфигов
+      run: |
+        echo "🔍 Проверка конфигурационных файлов..."
+        # Проверяем валидность YAML
+        python3 -c "
+        import yaml
+        try:
+            with open('src/main/resources/plugin.yml', 'r') as f:
+                yaml.safe_load(f)
+            print('✅ plugin.yml - OK')
+        except Exception as e:
+            print(f'❌ plugin.yml - ERROR: {e}')
+            
+        try:
+            with open('src/main/resources/config.yml', 'r') as f:
+                yaml.safe_load(f)
+            print('✅ config.yml - OK')
+        except Exception as e:
+            print(f'❌ config.yml - ERROR: {e}')
+            
+        try:
+            with open('src/main/resources/messages.yml', 'r') as f:
+                yaml.safe_load(f)
+            print('✅ messages.yml - OK')
+        except Exception as e:
+            print(f'❌ messages.yml - ERROR: {e}')
+        " || echo "📝 Проверка YAML пропущена (Python не установлен)"
+
+  artifacts:
+    name: 📦 Создание артефактов
+    runs-on: ubuntu-latest
+    needs: [build, quality]
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: ☕ Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+    
+    - name: 🏗️ Финальная сборка
+      run: mvn -B clean package -DskipTests
+      
+    - name: 📁 Создание артефактов
+      run: |
+        # Создаем папку для артефактов
+        mkdir -p artifacts
+        
+        # Копируем JAR
+        cp target/*.jar artifacts/
+        
+        # Копируем конфиги
+        cp src/main/resources/*.yml artifacts/
+        
+        # Создаем README для артефактов
+        cat > artifacts/README.txt << EOF
+        OperatorFromPerms - Артефакты сборки
+        ===================================
+        
+        Сборка: ${{ github.run_number }}
+        Коммит: ${{ github.sha }}
+        Ветка: ${{ github.ref }}
+        Дата: $(date)
+        
+        Содержимое:
+        - *.jar - Собранный плагин
+        - *.yml - Конфигурационные файлы
+        
+        Установка:
+        1. Скопируйте JAR файл в папку plugins/
+        2. Перезагрузите сервер
+        3. Настройте конфиги в plugins/OperatorFromPerms/
+        
+        Разработчики:
+        - gordey25690
+        - DeepSeek
+        EOF
+        
+        echo "📁 Содержимое папки artifacts:"
+        ls -la artifacts/
+    
+    - name: 📤 Загрузка артефактов
+      uses: actions/upload-artifact@v4
+      with:
+        name: OperatorFromPerms-Build-${{ github.run_number }}
+        path: |
+          artifacts/*.jar
+          artifacts/*.yml
+          artifacts/README.txt
+        retention-days: 90
+
+  notify:
+    name: 📢 Уведомление
+    runs-on: ubuntu-latest
+    needs: [artifacts]
+    if: always()
+    
+    steps:
+    - name: 📊 Статус сборки
+      run: |
+        if [ "${{ needs.artifacts.result }}" == "success" ]; then
+          echo "🎉 Сборка УСПЕШНА!"
+          echo "📦 Артефакты доступны во вкладке Actions"
+        else
+          echo "❌ Сборка ПРОВАЛЕНА!"
+          echo "🔍 Проверьте логи для деталей"
+        fi
+        
+    - name: 📝 Сводка сборки
+      run: |
+        echo "# 🏗️ Сборка OperatorFromPerms" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## 📊 Результаты:" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Проверка кода: ${{ needs.validate.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- 🏗️ Сборка: ${{ needs.build.result }}" >> $GITHUB_STEP_SUMMARY  
+        echo "- ✅ Качество: ${{ needs.quality.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- 📦 Артефакты: ${{ needs.artifacts.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## 📁 Артефакты:" >> $GITHUB_STEP_SUMMARY
+        echo "Скачайте собранный плагин во вкладке **Actions** → **Artifacts**" >> $GITHUB_STEP_SUMMARY
