@@ -194,33 +194,57 @@ jobs:
         cp src/main/resources/*.yml artifacts/
         
         # Создаем информацию о сборке
-        cat > artifacts/build-info.txt << EOF
-        OperatorFromPerms - Информация о сборке
-        ======================================
+        cat > artifacts/📋-информация-о-сборке.txt << EOF
+        🏗️ OperatorFromPerms - Информация о сборке
+        ==========================================
         
-        Номер сборки: ${{ github.run_number }}
-        Коммит: ${{ github.sha }}
-        Ветка: ${{ github.ref_name }}
-        Дата: $(date)
+        📊 Основная информация:
+        - Номер сборки: ${{ github.run_number }}
+        - Коммит: ${{ github.sha }}
+        - Ветка: ${{ github.ref_name }}
+        - Дата сборки: $(date)
         
-        Файлы:
-        - $(basename "$JAR_FILE") - Собранный плагин
-        - config.yml - Конфигурация
-        - messages.yml - Сообщения
+        📁 Содержимое артефактов:
+        - $(basename "$JAR_FILE") - Собранный плагин JAR
+        - config.yml - Файл конфигурации
+        - messages.yml - Файл сообщений
         - plugin.yml - Описание плагина
         
-        Установка:
-        1. Скопируйте JAR файл в папку plugins/
-        2. Перезагрузите сервер
-        3. Конфиги создадутся автоматически
+        🚀 Инструкция по установке:
+        1. 📥 Скачайте JAR файл из артефактов
+        2. 📁 Поместите в папку plugins/ вашего сервера
+        3. 🔄 Перезагрузите сервер (/reload или перезапуск)
+        4. ⚙️ Конфиги автоматически создадутся в plugins/OperatorFromPerms/
         
-        Команды:
-        /opf reload - перезагрузить конфиги
-        /opf check <игрок> - проверить статус
+        🎮 Использование:
+        - Выдать права оператора: /lp user <игрок> permission set operatorfromperms.all true
+        - Команды плагина: /opf reload - перезагрузить конфиги
+        - Проверить статус: /opf check <игрок>
         
-        Разработчики:
-        - gordey25690
+        👥 Разработчики:
+        - gordey25690 (https://github.com/gordey9992)
         - DeepSeek
+        
+        📄 Лицензия: MIT
+        EOF
+        
+        # Создаем краткую инструкцию
+        cat > artifacts/🚀-быстрый-старт.txt << EOF
+        🚀 БЫСТРЫЙ СТАРТ - OperatorFromPerms
+        
+        1. Установка:
+           - Поместите JAR файл в plugins/
+           - Перезагрузите сервер
+        
+        2. Использование:
+           /lp user <игрок> permission set operatorfromperms.all true
+        
+        3. Команды админа:
+           /opf reload - перезагрузить конфиги
+           /opf check <игрок> - проверить статус
+           /opf version - версия плагина
+        
+        📞 Поддержка: https://github.com/gordey9992/OperatorFromPerms
         EOF
         
         echo "📁 Содержимое папки artifacts:"
@@ -235,44 +259,133 @@ jobs:
         name: OperatorFromPerms-v${{ github.run_number }}
         path: artifacts/
         retention-days: 30
+        overwrite: true
 
-  notify:
-    name: 📢 Результаты сборки
+  results:
+    name: 📊 Финальные результаты
     runs-on: ubuntu-latest
-    needs: [artifacts]
+    needs: [validate, build, quality, artifacts]
     if: always()
     
     steps:
-    - name: 📊 Сводка результатов
+    - name: 📈 Сбор статистики
       run: |
-        echo "🎯 СБОРКА ЗАВЕРШЕНА" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "## 📈 Статусы заданий:" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Задание | Статус |" >> $GITHUB_STEP_SUMMARY
-        echo "|---------|--------|" >> $GITHUB_STEP_SUMMARY
-        echo "| 🔍 Проверка кода | ${{ needs.validate.result }} |" >> $GITHUB_STEP_SUMMARY
-        echo "| 🏗️ Сборка плагина | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY  
-        echo "| ✅ Контроль качества | ${{ needs.quality.result }} |" >> $GITHUB_STEP_SUMMARY
-        echo "| 📦 Артефакты | ${{ needs.artifacts.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "📊 СБОР СТАТИСТИКИ СБОРКИ..." >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         
-        if [ "${{ needs.artifacts.result }}" == "success" ]; then
-          echo "## 🎉 УСПЕХ!" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Плагин успешно собран!" >> $GITHUB_STEP_SUMMARY
-          echo "📦 **Артефакты доступны для скачивания**" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📥 Как получить:" >> $GITHUB_STEP_SUMMARY
-          echo "1. Перейдите во вкладку **Actions**" >> $GITHUB_STEP_SUMMARY
-          echo "2. Выберите эту сборку" >> $GITHUB_STEP_SUMMARY
-          echo "3. В разделе **Artifacts** скачайте `OperatorFromPerms-v${{ github.run_number }}`" >> $GITHUB_STEP_SUMMARY
+        # Получаем информацию о сборке
+        echo "## 📋 Общая информация" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Параметр | Значение |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|----------|" >> $GITHUB_STEP_SUMMARY
+        echo "| 🔢 Номер сборки | ${{ github.run_number }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🏷️ Ветка | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| 📅 Дата | $(date +'%Y-%m-%d %H:%M:%S') |" >> $GITHUB_STEP_SUMMARY
+        echo "| 👤 Инициатор | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+    - name: 🎯 Статус выполнения
+      run: |
+        echo "## 📊 Статус выполнения заданий" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Таблица статусов
+        echo "| Этап | Статус | Детали |" >> $GITHUB_STEP_SUMMARY
+        echo "|------|--------|--------|" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ needs.validate.result }}" == "success" ]; then
+          echo "| 🔍 Проверка кода | ✅ Успех | Структура проекта корректна |" >> $GITHUB_STEP_SUMMARY
         else
-          echo "## ❌ СБОРКА ПРОВАЛЕНА" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Проверьте логи для определения проблемы" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔍 Проверка кода | ❌ Провал | Ошибка в структуре проекта |" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "${{ needs.build.result }}" == "success" ]; then
+          echo "| 🏗️ Сборка плагина | ✅ Успех | JAR файл создан |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| 🏗️ Сборка плагина | ❌ Провал | Ошибка компиляции |" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "${{ needs.quality.result }}" == "success" ]; then
+          echo "| ✅ Контроль качества | ✅ Успех | Code style проверен |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| ✅ Контроль качества | ❌ Провал | Проблемы с качеством кода |" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "${{ needs.artifacts.result }}" == "success" ]; then
+          echo "| 📦 Создание артефактов | ✅ Успех | Артефакты готовы |" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| 📦 Создание артефактов | ❌ Провал | Ошибка создания артефактов |" >> $GITHUB_STEP_SUMMARY
         fi
         
         echo "" >> $GITHUB_STEP_SUMMARY
+        
+    - name: 📦 Информация об артефактах
+      if: needs.artifacts.result == 'success'
+      run: |
+        echo "## 📦 Готовые артефакты" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "🎉 Сборка успешно завершена! Артефакты готовы к использованию." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📥 Как скачать:" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "1. Перейдите во вкладку **Actions**" >> $GITHUB_STEP_SUMMARY
+        echo "2. Выберите эту сборку (**🏗️ Build OperatorFromPerms #${{ github.run_number }}**)" >> $GITHUB_STEP_SUMMARY
+        echo "3. Прокрутите вниз до раздела **Artifacts**" >> $GITHUB_STEP_SUMMARY
+        echo "4. Нажмите на **OperatorFromPerms-v${{ github.run_number }}** для скачивания" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📁 Содержимое артефактов:" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "- `OperatorFromPerms-1.0.0.jar` - Собранный плагин" >> $GITHUB_STEP_SUMMARY
+        echo "- `config.yml` - Файл конфигурации" >> $GITHUB_STEP_SUMMARY
+        echo "- `messages.yml` - Файл сообщений" >> $GITHUB_STEP_SUMMARY
+        echo "- `plugin.yml` - Описание плагина" >> $GITHUB_STEP_SUMMARY
+        echo "- `📋-информация-о-сборке.txt` - Полная документация" >> $GITHUB_STEP_SUMMARY
+        echo "- `🚀-быстрый-старт.txt` - Краткая инструкция" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+    - name: ❌ Информация об ошибках
+      if: needs.artifacts.result != 'success'
+      run: |
+        echo "## ❌ Сборка завершена с ошибками" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "⚠️ К сожалению, сборка не удалась. Пожалуйста, проверьте:" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "1. **Логи сборки** - нажмите на упавшее задание для деталей" >> $GITHUB_STEP_SUMMARY
+        echo "2. **Структуру проекта** - все ли файлы на месте?" >> $GITHUB_STEP_SUMMARY
+        echo "3. **Конфигурацию Maven** - корректность pom.xml" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "🔧 **Возможные проблемы:**" >> $GITHUB_STEP_SUMMARY
+        echo "- Отсутствуют необходимые файлы" >> $GITHUB_STEP_SUMMARY
+        echo "- Ошибки компиляции Java кода" >> $GITHUB_STEP_SUMMARY
+        echo "- Проблемы с зависимостями Maven" >> $GITHUB_STEP_SUMMARY
+        echo "- Невалидные YAML файлы" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+    - name: 🎉 Финальное сообщение
+      if: needs.artifacts.result == 'success'
+      run: |
+        echo "## 🎉 Поздравляем!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Ваш плагин **OperatorFromPerms** успешно собран и готов к использованию! 🚀" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🎮 Что дальше:" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "1. **📥 Скачайте артефакты** (см. выше)" >> $GITHUB_STEP_SUMMARY
+        echo "2. **🔄 Установите на сервер** - поместите JAR в plugins/" >> $GITHUB_STEP_SUMMARY
+        echo "3. **⚙️ Настройте права** через LuckPerms" >> $GITHUB_STEP_SUMMARY
+        echo "4. **🎯 Тестируйте** - проверьте работу плагина" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
         echo "---" >> $GITHUB_STEP_SUMMARY
-        echo "*Собрано: $(date)*" >> $GITHUB_STEP_SUMMARY
+        echo "**📞 Поддержка:** [GitHub Repository](https://github.com/gordey9992/OperatorFromPerms)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "*Собрано с ❤️ для сообщества Minecraft*" >> $GITHUB_STEP_SUMMARY
+        
+    - name: 📢 Уведомление о завершении
+      run: |
+        if [ "${{ needs.artifacts.result }}" == "success" ]; then
+          echo "🎉 СБОРКА #${{ github.run_number }} УСПЕШНО ЗАВЕРШЕНА!"
+          echo "📦 Артефакты готовы для скачивания"
+        else
+          echo "❌ СБОРКА #${{ github.run_number }} ЗАВЕРШЕНА С ОШИБКАМИ"
+          echo "🔍 Проверьте логи для диагностики"
+        fi
