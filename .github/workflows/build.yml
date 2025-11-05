@@ -1,4 +1,4 @@
-name: 🏗️ Build OperatorFromPerms
+name: Build OperatorFromPerms
 
 on:
   push:
@@ -18,7 +18,7 @@ env:
 
 jobs:
   validate:
-    name: 🔍 Проверка кода
+    name: Проверка кода
     runs-on: ubuntu-latest
     
     steps:
@@ -55,7 +55,7 @@ jobs:
         echo "✅ Структура проекта в порядке!"
 
   build:
-    name: 🏗️ Сборка плагина
+    name: Сборка плагина
     runs-on: ubuntu-latest
     needs: validate
     
@@ -107,7 +107,7 @@ jobs:
         fi
 
   quality:
-    name: ✅ Контроль качества
+    name: Контроль качества
     runs-on: ubuntu-latest
     needs: build
     
@@ -164,7 +164,7 @@ jobs:
         done
 
   artifacts:
-    name: 📦 Создание артефактов
+    name: Создание артефактов
     runs-on: ubuntu-latest
     needs: [build, quality]
     
@@ -239,7 +239,7 @@ jobs:
         # Получаем имя JAR файла без пути
         JAR_FILENAME=$(basename "$JAR_FILE")
         
-        # Создаем информацию о сборке - БЕЗ ПРОБЛЕМНЫХ СИМВОЛОВ
+        # Создаем информацию о сборке
         echo "📝 Создаем документацию..."
         cat > artifacts/информация-о-сборке.txt << 'EOF'
 OperatorFromPerms - Информация о сборке
@@ -275,7 +275,7 @@ OperatorFromPerms - Информация о сборке
 EOF
         echo "✅ Информация о сборке создана"
         
-        # Создаем краткую инструкцию - БЕЗ ПРОБЛЕМНЫХ СИМВОЛОВ
+        # Создаем краткую инструкцию
         cat > artifacts/быстрый-старт.txt << 'EOF'
 БЫСТРЫЙ СТАРТ - OperatorFromPerms
 
@@ -312,7 +312,7 @@ EOF
         overwrite: true
 
   results:
-    name: 📊 Финальные результаты
+    name: Финальные результаты
     runs-on: ubuntu-latest
     needs: [validate, build, quality, artifacts]
     if: always()
@@ -379,7 +379,7 @@ EOF
         echo "### 📥 Как скачать:" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "1. Перейдите во вкладку **Actions**" >> $GITHUB_STEP_SUMMARY
-        echo "2. Выберите эту сборку (**🏗️ Build OperatorFromPerms #${{ github.run_number }}**)" >> $GITHUB_STEP_SUMMARY
+        echo "2. Выберите эту сборку (**Build OperatorFromPerms #${{ github.run_number }}**)" >> $GITHUB_STEP_SUMMARY
         echo "3. Прокрутите вниз до раздела **Artifacts**" >> $GITHUB_STEP_SUMMARY
         echo "4. Нажмите на **OperatorFromPerms-v${{ github.run_number }}** для скачивания" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
