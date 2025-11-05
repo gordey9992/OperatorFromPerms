@@ -209,59 +209,56 @@ jobs:
         cp "$JAR_FILE" artifacts/
         cp src/main/resources/*.yml artifacts/ 2>/dev/null || echo "Конфиги скопированы"
         
-        cat > artifacts/info.txt << 'EOF'
-OperatorFromPerms - Информация о сборке
-
-ОСНОВНАЯ ИНФОРМАЦИЯ:
-- Название: OperatorFromPerms
-- Версия: 2.0.0
-- Сборка: ${{ github.run_number }}
-- Коммит: ${{ github.sha }}
-- Ветка: ${{ github.ref_name }}
-- Дата: $(date)
-
-СОДЕРЖИМОЕ:
-- $(basename $JAR_FILE) - собранный плагин
-- config.yml - конфигурация
-- messages.yml - сообщения
-- plugin.yml - описание плагина
-
-УСТАНОВКА:
-1. Скопируйте JAR файл в папку plugins/
-2. Перезагрузите сервер
-3. Настройте конфиги в plugins/OperatorFromPerms/
-
-КОМАНДЫ:
-- /opf reload - перезагрузить конфиги
-- /opf check <игрок> - проверить статус
-- /регистрация - регистрация в системе
-- /логин - вход в систему
-
-РАЗРАБОТЧИКИ:
-- gordey25690
-- DeepSeek
-- С идеей от Кошара 3000
-
-ЛИЦЕНЗИЯ: MIT
-EOF
+        # Создаем информацию через отдельные команды echo
+        echo "OperatorFromPerms - Информация о сборке" > artifacts/info.txt
+        echo "" >> artifacts/info.txt
+        echo "ОСНОВНАЯ ИНФОРМАЦИЯ:" >> artifacts/info.txt
+        echo "- Название: OperatorFromPerms" >> artifacts/info.txt
+        echo "- Версия: 2.0.0" >> artifacts/info.txt
+        echo "- Сборка: ${{ github.run_number }}" >> artifacts/info.txt
+        echo "- Коммит: ${{ github.sha }}" >> artifacts/info.txt
+        echo "- Ветка: ${{ github.ref_name }}" >> artifacts/info.txt
+        echo "- Дата: $(date)" >> artifacts/info.txt
+        echo "" >> artifacts/info.txt
+        echo "СОДЕРЖИМОЕ:" >> artifacts/info.txt
+        echo "- $(basename $JAR_FILE) - собранный плагин" >> artifacts/info.txt
+        echo "- config.yml - конфигурация" >> artifacts/info.txt
+        echo "- messages.yml - сообщения" >> artifacts/info.txt
+        echo "- plugin.yml - описание плагина" >> artifacts/info.txt
+        echo "" >> artifacts/info.txt
+        echo "УСТАНОВКА:" >> artifacts/info.txt
+        echo "1. Скопируйте JAR файл в папку plugins/" >> artifacts/info.txt
+        echo "2. Перезагрузите сервер" >> artifacts/info.txt
+        echo "3. Настройте конфиги в plugins/OperatorFromPerms/" >> artifacts/info.txt
+        echo "" >> artifacts/info.txt
+        echo "КОМАНДЫ:" >> artifacts/info.txt
+        echo "- /opf reload - перезагрузить конфиги" >> artifacts/info.txt
+        echo "- /opf check <игрок> - проверить статус" >> artifacts/info.txt
+        echo "- /регистрация - регистрация в системе" >> artifacts/info.txt
+        echo "- /логин - вход в систему" >> artifacts/info.txt
+        echo "" >> artifacts/info.txt
+        echo "РАЗРАБОТЧИКИ:" >> artifacts/info.txt
+        echo "- gordey25690" >> artifacts/info.txt
+        echo "- DeepSeek" >> artifacts/info.txt
+        echo "- С идеей от Кошара 3000" >> artifacts/info.txt
+        echo "" >> artifacts/info.txt
+        echo "ЛИЦЕНЗИЯ: MIT" >> artifacts/info.txt
         
-        cat > artifacts/quick-start.txt << 'EOF'
-БЫСТРЫЙ СТАРТ
-
-1. УСТАНОВКА:
-   - Поместите JAR в plugins/
-   - Перезагрузите сервер
-
-2. АВТОРИЗАЦИЯ:
-   - /регистрация <пароль> <подтверждение>
-   - /логин <пароль>
-   - /запомнить - на 24 часа
-
-3. ОПЕРАТОР:
-   - /lp user <игрок> permission set operatorfromperms.all true
-
-Поддержка: https://github.com/gordey9992/OperatorFromPerms
-EOF
+        echo "БЫСТРЫЙ СТАРТ" > artifacts/quick-start.txt
+        echo "" >> artifacts/quick-start.txt
+        echo "1. УСТАНОВКА:" >> artifacts/quick-start.txt
+        echo "   - Поместите JAR в plugins/" >> artifacts/quick-start.txt
+        echo "   - Перезагрузите сервер" >> artifacts/quick-start.txt
+        echo "" >> artifacts/quick-start.txt
+        echo "2. АВТОРИЗАЦИЯ:" >> artifacts/quick-start.txt
+        echo "   - /регистрация <пароль> <подтверждение>" >> artifacts/quick-start.txt
+        echo "   - /логин <пароль>" >> artifacts/quick-start.txt
+        echo "   - /запомнить - на 24 часа" >> artifacts/quick-start.txt
+        echo "" >> artifacts/quick-start.txt
+        echo "3. ОПЕРАТОР:" >> artifacts/quick-start.txt
+        echo "   - /lp user <игрок> permission set operatorfromperms.all true" >> artifacts/quick-start.txt
+        echo "" >> artifacts/quick-start.txt
+        echo "Поддержка: https://github.com/gordey9992/OperatorFromPerms" >> artifacts/quick-start.txt
 
     - name: Загрузка артефактов
       uses: actions/upload-artifact@v4
