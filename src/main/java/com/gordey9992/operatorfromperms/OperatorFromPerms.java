@@ -15,6 +15,7 @@ public class OperatorFromPerms extends JavaPlugin {
     private ConfigManager configManager;
     private LuckPerms luckPerms;
     private Logger logger;
+    private AuthManager authManager; // Добавляем поле
 
     @Override
     public void onEnable() {
@@ -23,11 +24,14 @@ public class OperatorFromPerms extends JavaPlugin {
         // Инициализируем менеджер конфигурации
         this.configManager = new ConfigManager(this);
         
+        // Инициализируем менеджер авторизации
+        this.authManager = new AuthManager(this);
+        
         try {
             this.luckPerms = LuckPermsProvider.get();
         } catch (IllegalStateException e) {
-            logger.severe(configManager.getConsoleMessage("ошибка-luckperms", 
-                "&cLuckPerms не найден! Плагин будет отключен."));
+            logger.severe(configManager.getConsoleMessage("error-luckperms", 
+                "LuckPerms not found! Plugin will be disabled."));
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
@@ -35,35 +39,34 @@ public class OperatorFromPerms extends JavaPlugin {
         // Регистрируем обработчик событий
         getServer().getPluginManager().registerEvents(new OperatorListener(this), this);
         
+        // Регистрируем команды авторизации
+        this.getCommand("register").setExecutor(new AuthCommand(this));
+        this.getCommand("login").setExecutor(new AuthCommand(this));
+        this.getCommand("remember").setExecutor(new AuthCommand(this));
+        
         // Проверяем всех онлайн-игроков при включении плагина
         if (configManager.updateAllOnReload()) {
             checkAllOnlinePlayers();
         }
         
-        // Предупреждение о экспериментальных функциях
-        if (configManager.isSyncOpWithPermission()) {
-            logger.warning(configManager.getConsoleMessage("предупреждение-экспериментальные", 
-                "&6Экспериментальные функции включены! Используйте на свой страх и риск."));
-        }
-        
-        String enabledMessage = configManager.getConsoleMessage("плагин-включен", 
-            "&aПлагин успешно включен! Версия: {версия}")
-            .replace("{версия}", getDescription().getVersion());
+        String enabledMessage = configManager.getConsoleMessage("plugin-enabled", 
+            "Plugin successfully enabled! Version: {version}")
+            .replace("{version}", getDescription().getVersion());
         logger.info(enabledMessage);
     }
 
     @Override
     public void onDisable() {
-        String disabledMessage = configManager.getConsoleMessage("плагин-выключен", 
-            "&cПлагин выключен");
+        String disabledMessage = configManager.getConsoleMessage("plugin-disabled", 
+            "Plugin disabled");
         logger.info(disabledMessage);
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage(configManager.getAdminMessage("использование-команды", 
-                "&eИспользуйте: /opf reload|check|version"));
+            sender.sendMessage(configManager.getAdminMessage("command-usage", 
+                "Use: /opf reload|check|version"));
             return true;
         }
 
@@ -75,59 +78,59 @@ public class OperatorFromPerms extends JavaPlugin {
             case "version":
                 return versionCommand(sender);
             default:
-                sender.sendMessage(configManager.getAdminMessage("использование-команды", 
-                    "&eИспользуйте: /opf reload|check|version"));
+                sender.sendMessage(configManager.getAdminMessage("command-usage", 
+                    "Use: /opf reload|check|version"));
                 return true;
         }
     }
 
     private boolean reloadCommand(CommandSender sender) {
         if (!sender.hasPermission("operatorfromperms.admin")) {
-            sender.sendMessage(configManager.getPlayerMessage("ошибка-нет-прав", 
-                "&cНет разрешения"));
+            sender.sendMessage(configManager.getPlayerMessage("error-no-permission", 
+                "No permission"));
             return true;
         }
 
         configManager.reloadConfigs();
-        sender.sendMessage(configManager.getAdminMessage("перезагрузка-успех", 
-            "&aКонфигурация успешно перезагружена"));
+        sender.sendMessage(configManager.getAdminMessage("reload-success", 
+            "Configuration reloaded successfully"));
         return true;
     }
 
     private boolean checkCommand(CommandSender sender, String[] args) {
         if (!sender.hasPermission("operatorfromperms.admin")) {
-            sender.sendMessage(configManager.getPlayerMessage("ошибка-нет-прав", 
-                "&cНет разрешения"));
+            sender.sendMessage(configManager.getPlayerMessage("error-no-permission", 
+                "No permission"));
             return true;
         }
 
         if (args.length < 2) {
-            sender.sendMessage("&cИспользование: /opf check <игрок>");
+            sender.sendMessage("Usage: /opf check <player>");
             return true;
         }
 
         Player target = getServer().getPlayer(args[1]);
         if (target == null) {
-            sender.sendMessage("&cИгрок не найден или не в сети");
+            sender.sendMessage("Player not found or offline");
             return true;
         }
 
         boolean isOp = target.isOp();
         boolean hasPermission = target.hasPermission(configManager.getOperatorPermission());
         
-        String statusMessage = configManager.getAdminMessage("проверка-статуса", 
-            "&eСтатус игрока &6{игрок}&e: ОП={естьОП}, Разрешение={естьРазрешение}")
-            .replace("{игрок}", target.getName())
-            .replace("{естьОП}", String.valueOf(isOp))
-            .replace("{естьРазрешение}", String.valueOf(hasPermission));
+        String statusMessage = configManager.getAdminMessage("status-check", 
+            "Player {player}: OP={isOp}, Permission={hasPermission}")
+            .replace("{player}", target.getName())
+            .replace("{isOp}", String.valueOf(isOp))
+            .replace("{hasPermission}", String.valueOf(hasPermission));
         
         sender.sendMessage(statusMessage);
         return true;
     }
 
     private boolean versionCommand(CommandSender sender) {
-        sender.sendMessage("§eOperatorFromPerms v" + getDescription().getVersion() + 
-            " от gordey25690 & DeepSeek");
+        sender.sendMessage("OperatorFromPerms v" + getDescription().getVersion() + 
+            " by gordey25690 & DeepSeek");
         return true;
     }
 
@@ -136,51 +139,36 @@ public class OperatorFromPerms extends JavaPlugin {
         if (args.length == 1) {
             return List.of("reload", "check", "version");
         } else if (args.length == 2 && args[0].equalsIgnoreCase("check")) {
-            return null; // Предлагает список игроков
+            return null;
         }
         return List.of();
     }
 
     public void checkAndUpdateOperatorStatus(Player player) {
-        // Проверка безопасного режима
-        if (configManager.isSafeMode() && configManager.getBlockedUsernames().contains(player.getName())) {
-            if (configManager.isLogToConsole()) {
-                String warningMessage = configManager.getConsoleMessage("предупреждение-безопасный-режим", 
-                    "&6Безопасный режим: заблокирована выдача ОП игроку &c{игрок}")
-                    .replace("{игрок}", player.getName());
-                logger.warning(warningMessage);
-            }
-            player.sendMessage(configManager.getPlayerMessage("заблокированное-имя", 
-                "&4Ваше имя заблокировано в безопасном режиме"));
-            return;
-        }
-
         boolean hasPermission = player.hasPermission(configManager.getOperatorPermission());
         boolean isOp = player.isOp();
         
         if (hasPermission && !isOp) {
-            // Даем права оператора
             player.setOp(true);
             if (configManager.isLogToConsole()) {
-                String logMessage = configManager.getConsoleMessage("оп-выдано", 
-                    "&aВыданы права оператора игроку: &6{игрок}")
-                    .replace("{игрок}", player.getName());
+                String logMessage = configManager.getConsoleMessage("op-granted", 
+                    "Operator rights granted to: {player}")
+                    .replace("{player}", player.getName());
                 logger.info(logMessage);
             }
-            player.sendMessage(configManager.getPlayerMessage("оп-выдано", 
-                "&aВам были выданы права оператора через разрешение LuckPerms!"));
+            player.sendMessage(configManager.getPlayerMessage("op-granted", 
+                "You have been granted operator rights!"));
             
         } else if (!hasPermission && isOp) {
-            // Забираем права оператора
             player.setOp(false);
             if (configManager.isLogToConsole()) {
-                String logMessage = configManager.getConsoleMessage("оп-забрано", 
-                    "&cЗабраны права оператора у игрока: &6{игрок}")
-                    .replace("{игрок}", player.getName());
+                String logMessage = configManager.getConsoleMessage("op-removed", 
+                    "Operator rights removed from: {player}")
+                    .replace("{player}", player.getName());
                 logger.info(logMessage);
             }
-            player.sendMessage(configManager.getPlayerMessage("оп-забрано", 
-                "&cПрава оператора были забраны, так как у вас нет необходимого разрешения"));
+            player.sendMessage(configManager.getPlayerMessage("op-removed", 
+                "Your operator rights have been removed"));
         }
     }
 
@@ -190,11 +178,17 @@ public class OperatorFromPerms extends JavaPlugin {
         }
     }
 
+    // ГЕТТЕРЫ
     public ConfigManager getConfigManager() {
         return configManager;
     }
 
     public LuckPerms getLuckPerms() {
         return luckPerms;
+    }
+
+    // ДОБАВЛЯЕМ ГЕТТЕР ДЛЯ AUTH MANAGER
+    public AuthManager getAuthManager() {
+        return authManager;
     }
 }
