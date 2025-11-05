@@ -140,51 +140,51 @@ public class ConfigManager {
 
     // Геттеры для config.yml
     public String getOperatorPermission() {
-        return config.getString("settings.operator-permission", "operatorfromperms.all");
+        return config.getString("settings.оператор-разрешение", "operatorfromperms.all");
     }
 
     public boolean isCheckOnJoin() {
-        return config.getBoolean("settings.check-on-join", true);
+        return config.getBoolean("settings.проверка-при-входе", true);
     }
 
     public boolean isCheckOnPermissionChange() {
-        return config.getBoolean("settings.check-on-permission-change", true);
+        return config.getBoolean("settings.проверка-при-изменении-прав", true);
     }
 
     public int getCheckDelayTicks() {
-        return config.getInt("settings.check-delay-ticks", 20);
+        return config.getInt("settings.задержка-проверки-тики", 20);
     }
 
     public boolean isLogToConsole() {
-        return config.getBoolean("settings.log-to-console", true);
+        return config.getBoolean("settings.логировать-в-консоль", true);
     }
 
     public boolean isSafeMode() {
-        return config.getBoolean("settings.safe-mode", true);
+        return config.getBoolean("settings.безопасный-режим", true);
     }
 
     public List<String> getBlockedUsernames() {
-        return config.getStringList("settings.blocked-usernames");
+        return config.getStringList("settings.заблокированные-имена");
     }
 
     public boolean updateOnWorldChange() {
-        return config.getBoolean("update-settings.update-on-world-change", true);
+        return config.getBoolean("настройки-обновления.обновлять-при-смене-мира", true);
     }
 
     public boolean updateOnGroupChange() {
-        return config.getBoolean("update-settings.update-on-group-change", true);
+        return config.getBoolean("настройки-обновления.обновлять-при-смене-группы", true);
     }
 
     public boolean updateAllOnReload() {
-        return config.getBoolean("update-settings.update-all-on-reload", true);
+        return config.getBoolean("настройки-обновления.обновлять-всех-при-перезагрузке", true);
     }
 
     public boolean isSyncOpWithPermission() {
-        return config.getBoolean("experimental.sync-op-with-permission", false);
+        return config.getBoolean("экспериментальные.синхронизация-оп-с-разрешением", false);
     }
 
     public boolean isAutoFixDiscrepancies() {
-        return config.getBoolean("experimental.auto-fix-discrepancies", true);
+        return config.getBoolean("экспериментальные.авто-исправление-расхождений", true);
     }
 
     // Геттеры для messages.yml с поддержкой цветовых кодов
@@ -194,15 +194,15 @@ public class ConfigManager {
     }
 
     public String getPlayerMessage(String key, String defaultValue) {
-        return getMessage("player-messages." + key, defaultValue);
+        return getMessage("сообщения-игрокам." + key, defaultValue);
     }
 
     public String getConsoleMessage(String key, String defaultValue) {
-        return getMessage("console-messages." + key, defaultValue);
+        return getMessage("сообщения-консоль." + key, defaultValue);
     }
 
     public String getAdminMessage(String key, String defaultValue) {
-        return getMessage("admin-messages." + key, defaultValue);
+        return getMessage("сообщения-админам." + key, defaultValue);
     }
 
     public FileConfiguration getConfig() {
