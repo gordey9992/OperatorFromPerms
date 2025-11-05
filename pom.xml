@@ -9,10 +9,16 @@
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
+    <name>OperatorFromPerms</name>
+    <description>Дает права оператора через разрешение LuckPerms</description>
+    <url>https://github.com/gordey9992/OperatorFromPerms</url>
+
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.version>3.11.0</maven.compiler.version>
+        <maven.shade.version>3.4.1</maven.shade.version>
     </properties>
 
     <repositories>
@@ -46,25 +52,77 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
+                <version>${maven.compiler.version}</version>
                 <configuration>
                     <source>21</source>
                     <target>21</target>
+                    <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.4.1</version>
+                <version>${maven.shade.version}</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
                         <goals>
                             <goal>shade</goal>
                         </goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>
         </plugins>
+        
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>*.yml</include>
+                    <include>plugin.yml</include>
+                </includes>
+            </resource>
+        </resources>
     </build>
+
+    <developers>
+        <developer>
+            <id>gordey25690</id>
+            <name>gordey25690</name>
+            <url>https://github.com/gordey9992</url>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/gordey9992/OperatorFromPerms.git</connection>
+        <developerConnection>scm:git:ssh://github.com:gordey9992/OperatorFromPerms.git</developerConnection>
+        <url>https://github.com/gordey9992/OperatorFromPerms/tree/main</url>
+    </scm>
 </project>
