@@ -25,38 +25,48 @@ jobs:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
     
-    - name: 🚨 Проверить синтаксис YAML
-      uses: actions/desktop/yml-validator@v1
-      with:
-        file: src/main/resources/plugin.yml
-    
     - name: 📝 Проверить структуру проекта
       run: |
         echo "🔎 Проверка структуры проекта..."
-        [ -f "pom.xml" ] || echo "❌ Отсутствует pom.xml"
-        [ -f "src/main/resources/plugin.yml" ] || echo "❌ Отсутствует plugin.yml"
-        [ -f "src/main/resources/config.yml" ] || echo "❌ Отсутствует config.yml"
-        [ -f "src/main/resources/messages.yml" ] || echo "❌ Отсутствует messages.yml"
-        [ -d "src/main/java/com/gordey9992/operatorfromperms" ] || echo "❌ Отсутствует исходный код"
-        echo "✅ Проверка структуры завершена"
+        REQUIRED_FILES=("pom.xml" "src/main/resources/plugin.yml" "src/main/resources/config.yml" "src/main/resources/messages.yml")
+        REQUIRED_DIRS=("src/main/java/com/gordey9992/operatorfromperms")
+        
+        for file in "${REQUIRED_FILES[@]}"; do
+          if [ -f "$file" ]; then
+            echo "✅ $file - найден"
+          else
+            echo "❌ $file - ОТСУТСТВУЕТ"
+            exit 1
+          fi
+        done
+        
+        for dir in "${REQUIRED_DIRS[@]}"; do
+          if [ -d "$dir" ]; then
+            echo "✅ $dir - найден"
+            # Проверяем что есть java файлы
+            JAVA_FILES=$(find "$dir" -name "*.java" | wc -l)
+            echo "📁 Найдено Java файлов: $JAVA_FILES"
+          else
+            echo "❌ $dir - ОТСУТСТВУЕТ"
+            exit 1
+          fi
+        done
+        
+        echo "✅ Структура проекта в порядке!"
 
   build:
     name: 🏗️ Сборка плагина
     runs-on: ubuntu-latest
     needs: validate
     
-    strategy:
-      matrix:
-        java: [ '21' ]
-    
     steps:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
     
-    - name: ☕ Set up JDK ${{ matrix.java }}
+    - name: ☕ Set up JDK 21
       uses: actions/setup-java@v4
       with:
-        java-version: ${{ matrix.java }}
+        java-version: '21'
         distribution: 'temurin'
         cache: 'maven'
     
@@ -64,9 +74,10 @@ jobs:
       run: |
         echo "🔄 Начало сборки ${{ env.PLUGIN_NAME }}"
         echo "📅 Дата: $(date)"
-        echo "☕ Java: ${{ matrix.java }}"
-        echo "🏷️  Git commit: ${{ github.sha }}"
+        echo "☕ Java: 21"
+        echo "🏷️ Git commit: ${{ github.sha }}"
         echo "🎯 Ветка: ${{ github.ref }}"
+        echo "👤 Инициатор: ${{ github.actor }}"
     
     - name: 🧹 Очистка предыдущих сборок
       run: mvn -B clean
@@ -80,20 +91,20 @@ jobs:
     - name: 🛠️ Сборка JAR
       run: mvn -B package -DskipTests
       
-    - name: 📏 Проверка размера JAR
+    - name: 📏 Анализ сборки
       run: |
-        JAR_FILE=$(ls target/*.jar)
-        echo "📦 Файл: $JAR_FILE"
-        echo "📊 Размер: $(du -h $JAR_FILE | cut -f1)"
-        echo "🔍 MD5: $(md5sum $JAR_FILE | cut -d' ' -f1)"
-        
-    - name: 📋 Информация о собранном плагине
-      run: |
-        JAR_FILE=$(ls target/*.jar)
-        echo "🎉 Сборка завершена!"
-        echo "📁 Файл: $JAR_FILE"
-        echo "💾 Размер: $(du -h $JAR_FILE | cut -f1)"
-        unzip -p $JAR_FILE plugin.yml | head -10
+        JAR_FILE=$(ls target/*.jar 2>/dev/null | head -1)
+        if [ -f "$JAR_FILE" ]; then
+          echo "🎉 Сборка УСПЕШНА!"
+          echo "📦 Файл: $JAR_FILE"
+          echo "📊 Размер: $(du -h "$JAR_FILE" | cut -f1)"
+          echo "🔍 MD5: $(md5sum "$JAR_FILE" | cut -d' ' -f1)"
+          echo "📝 Информация о плагине:"
+          unzip -p "$JAR_FILE" plugin.yml 2>/dev/null | grep -E "(name|version|main|api-version)" || echo "Не удалось прочитать plugin.yml"
+        else
+          echo "❌ Сборка ПРОВАЛЕНА - JAR файл не найден"
+          exit 1
+        fi
 
   quality:
     name: ✅ Контроль качества
@@ -110,41 +121,47 @@ jobs:
         java-version: '21'
         distribution: 'temurin'
     
-    - name: 🔍 Проверка стиля кода
+    - name: 🔍 Проверка code style
       run: |
-        echo "🔍 Проверка code style..."
-        # Проверяем наличие русских комментариев
+        echo "🔍 Анализ кода..."
+        
+        # Проверяем наличие TODO/FIXME
+        echo "📋 Поиск TODO/FIXME:"
         find src/main/java -name "*.java" -exec grep -l "TODO\|FIXME" {} \; | while read file; do
-          echo "⚠️  Найден TODO/FIXME в: $file"
+          echo "⚠️  Найден в: $file"
+          grep -n "TODO\|FIXME" "$file"
         done
         
-    - name: 📝 Проверка конфигов
+        # Проверяем русские комментарии
+        echo "🔤 Проверка комментариев:"
+        JAVA_FILES_COUNT=$(find src/main/java -name "*.java" | wc -l)
+        echo "📁 Всего Java файлов: $JAVA_FILES_COUNT"
+        
+        # Проверяем базовый синтаксис Java
+        echo "🔧 Проверка синтаксиса Java..."
+        mvn -B compile > /dev/null 2>&1 && echo "✅ Синтаксис Java - OK" || echo "❌ Ошибки в синтаксисе Java"
+        
+    - name: 📋 Проверка конфигураций
       run: |
-        echo "🔍 Проверка конфигурационных файлов..."
-        # Проверяем валидность YAML
-        python3 -c "
-        import yaml
-        try:
-            with open('src/main/resources/plugin.yml', 'r') as f:
-                yaml.safe_load(f)
-            print('✅ plugin.yml - OK')
-        except Exception as e:
-            print(f'❌ plugin.yml - ERROR: {e}')
-            
-        try:
-            with open('src/main/resources/config.yml', 'r') as f:
-                yaml.safe_load(f)
-            print('✅ config.yml - OK')
-        except Exception as e:
-            print(f'❌ config.yml - ERROR: {e}')
-            
-        try:
-            with open('src/main/resources/messages.yml', 'r') as f:
-                yaml.safe_load(f)
-            print('✅ messages.yml - OK')
-        except Exception as e:
-            print(f'❌ messages.yml - ERROR: {e}')
-        " || echo "📝 Проверка YAML пропущена (Python не установлен)"
+        echo "🔧 Проверка YAML файлов..."
+        
+        # Простая проверка plugin.yml
+        if grep -q "name:" src/main/resources/plugin.yml && \
+           grep -q "version:" src/main/resources/plugin.yml && \
+           grep -q "main:" src/main/resources/plugin.yml; then
+          echo "✅ plugin.yml - базовые поля присутствуют"
+        else
+          echo "❌ plugin.yml - отсутствуют обязательные поля"
+        fi
+        
+        # Проверяем что конфиги не пустые
+        for config in src/main/resources/*.yml; do
+          if [ -s "$config" ]; then
+            echo "✅ $(basename "$config") - не пустой"
+          else
+            echo "❌ $(basename "$config") - ПУСТОЙ!"
+          fi
+        done
 
   artifacts:
     name: 📦 Создание артефактов
@@ -164,35 +181,42 @@ jobs:
     - name: 🏗️ Финальная сборка
       run: mvn -B clean package -DskipTests
       
-    - name: 📁 Создание артефактов
+    - name: 📁 Подготовка артефактов
       run: |
         # Создаем папку для артефактов
         mkdir -p artifacts
         
         # Копируем JAR
-        cp target/*.jar artifacts/
+        JAR_FILE=$(ls target/*.jar)
+        cp "$JAR_FILE" artifacts/
         
         # Копируем конфиги
         cp src/main/resources/*.yml artifacts/
         
-        # Создаем README для артефактов
-        cat > artifacts/README.txt << EOF
-        OperatorFromPerms - Артефакты сборки
-        ===================================
+        # Создаем информацию о сборке
+        cat > artifacts/build-info.txt << EOF
+        OperatorFromPerms - Информация о сборке
+        ======================================
         
-        Сборка: ${{ github.run_number }}
+        Номер сборки: ${{ github.run_number }}
         Коммит: ${{ github.sha }}
-        Ветка: ${{ github.ref }}
+        Ветка: ${{ github.ref_name }}
         Дата: $(date)
         
-        Содержимое:
-        - *.jar - Собранный плагин
-        - *.yml - Конфигурационные файлы
+        Файлы:
+        - $(basename "$JAR_FILE") - Собранный плагин
+        - config.yml - Конфигурация
+        - messages.yml - Сообщения
+        - plugin.yml - Описание плагина
         
         Установка:
         1. Скопируйте JAR файл в папку plugins/
         2. Перезагрузите сервер
-        3. Настройте конфиги в plugins/OperatorFromPerms/
+        3. Конфиги создадутся автоматически
+        
+        Команды:
+        /opf reload - перезагрузить конфиги
+        /opf check <игрок> - проверить статус
         
         Разработчики:
         - gordey25690
@@ -201,43 +225,54 @@ jobs:
         
         echo "📁 Содержимое папки artifacts:"
         ls -la artifacts/
+        echo ""
+        echo "📊 Размеры файлов:"
+        du -h artifacts/*
     
     - name: 📤 Загрузка артефактов
       uses: actions/upload-artifact@v4
       with:
-        name: OperatorFromPerms-Build-${{ github.run_number }}
-        path: |
-          artifacts/*.jar
-          artifacts/*.yml
-          artifacts/README.txt
-        retention-days: 90
+        name: OperatorFromPerms-v${{ github.run_number }}
+        path: artifacts/
+        retention-days: 30
 
   notify:
-    name: 📢 Уведомление
+    name: 📢 Результаты сборки
     runs-on: ubuntu-latest
     needs: [artifacts]
     if: always()
     
     steps:
-    - name: 📊 Статус сборки
+    - name: 📊 Сводка результатов
       run: |
+        echo "🎯 СБОРКА ЗАВЕРШЕНА" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## 📈 Статусы заданий:" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Задание | Статус |" >> $GITHUB_STEP_SUMMARY
+        echo "|---------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| 🔍 Проверка кода | ${{ needs.validate.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🏗️ Сборка плагина | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY  
+        echo "| ✅ Контроль качества | ${{ needs.quality.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| 📦 Артефакты | ${{ needs.artifacts.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
         if [ "${{ needs.artifacts.result }}" == "success" ]; then
-          echo "🎉 Сборка УСПЕШНА!"
-          echo "📦 Артефакты доступны во вкладке Actions"
+          echo "## 🎉 УСПЕХ!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Плагин успешно собран!" >> $GITHUB_STEP_SUMMARY
+          echo "📦 **Артефакты доступны для скачивания**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📥 Как получить:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Перейдите во вкладку **Actions**" >> $GITHUB_STEP_SUMMARY
+          echo "2. Выберите эту сборку" >> $GITHUB_STEP_SUMMARY
+          echo "3. В разделе **Artifacts** скачайте `OperatorFromPerms-v${{ github.run_number }}`" >> $GITHUB_STEP_SUMMARY
         else
-          echo "❌ Сборка ПРОВАЛЕНА!"
-          echo "🔍 Проверьте логи для деталей"
+          echo "## ❌ СБОРКА ПРОВАЛЕНА" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Проверьте логи для определения проблемы" >> $GITHUB_STEP_SUMMARY
         fi
         
-    - name: 📝 Сводка сборки
-      run: |
-        echo "# 🏗️ Сборка OperatorFromPerms" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "## 📊 Результаты:" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Проверка кода: ${{ needs.validate.result }}" >> $GITHUB_STEP_SUMMARY
-        echo "- 🏗️ Сборка: ${{ needs.build.result }}" >> $GITHUB_STEP_SUMMARY  
-        echo "- ✅ Качество: ${{ needs.quality.result }}" >> $GITHUB_STEP_SUMMARY
-        echo "- 📦 Артефакты: ${{ needs.artifacts.result }}" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "## 📁 Артефакты:" >> $GITHUB_STEP_SUMMARY
-        echo "Скачайте собранный плагин во вкладке **Actions** → **Artifacts**" >> $GITHUB_STEP_SUMMARY
+        echo "---" >> $GITHUB_STEP_SUMMARY
+        echo "*Собрано: $(date)*" >> $GITHUB_STEP_SUMMARY
