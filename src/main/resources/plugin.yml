@@ -6,3 +6,18 @@ description: Дает права оператора через разрешен�
 authors: [gordey25690, DeepSeek]
 website: https://github.com/gordey9992/OperatorFromPerms
 depend: [LuckPerms]
+
+commands:
+  operatorfromperms:
+    description: Управление плагином OperatorFromPerms
+    aliases: [opf]
+    permission: operatorfromperms.admin
+    usage: /<command> <reload|check|version>
+
+permissions:
+  operatorfromperms.admin:
+    description: Доступ к командам администрирования плагина
+    default: op
+  operatorfromperms.all:
+    description: Дает права оператора через разрешение
+    default: false
