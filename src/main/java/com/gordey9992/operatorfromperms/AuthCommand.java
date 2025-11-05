@@ -11,7 +11,7 @@ public class AuthCommand implements CommandExecutor {
 
     public AuthCommand(OperatorFromPerms plugin) {
         this.plugin = plugin;
-        this.authManager = plugin.getAuthManager();
+        this.authManager = plugin.getAuthManager(); // Теперь этот метод существует
     }
 
     @Override
