@@ -1,0 +1,8 @@
+name: OperatorFromPerms
+version: 1.0.0
+main: com.gordey9992.operatorfromperms.OperatorFromPerms
+api-version: 1.21
+description: Дает права оператора через разрешение LuckPerms
+authors: [gordey25690, DeepSeek]
+website: https://github.com/gordey9992/OperatorFromPerms
+depend: [LuckPerms]
