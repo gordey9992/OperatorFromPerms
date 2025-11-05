@@ -1,0 +1,12 @@
+# Файл для хранения данных авторизации
+# Создается автоматически в plugins/OperatorFromPerms/auth.yml
+
+players: {}
+# Структура данных:
+# players:
+#   uuid:
+#     password: "хэш-пароля"
+#     registered: 1234567890
+#     lastLogin: 1234567890
+#     lastIP: "127.0.0.1"
+#     session: 1234567890
