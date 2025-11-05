@@ -1,6 +1,6 @@
 # OperatorFromPerms
 
-[![🏗️ Build OperatorFromPerms](https://github.com/gordey9992/OperatorFromPerms/actions/workflows/build.yml/badge.svg)](https://github.com/gordey9992/OperatorFromPerms/actions/workflows/build.yml)
+[![Сборка OperatorFromPerms](https://github.com/gordey9992/OperatorFromPerms/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/gordey9992/OperatorFromPerms/actions/workflows/build.yml)
 
 Плагин для Minecraft серверов (1.21.1+), который позволяет выдавать права оператора через разрешение LuckPerms.
 
