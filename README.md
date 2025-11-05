@@ -1,2 +1,20 @@
 # OperatorFromPerms
-Плагин OperatorFromPerms
+
+Плагин для Minecraft серверов (1.21.1+), который позволяет выдавать права оператора через разрешение LuckPerms.
+
+## Описание
+
+Этот плагин добавляет специальное разрешение `operatorfromperms.all`, которое при выдаче автоматически дает игроку все права оператора. При удалении разрешения - права оператора забираются.
+
+## Установка
+
+1. Скачайте последнюю версию плагина из [Releases](https://github.com/gordey9992/OperatorFromPerms/releases)
+2. Поместите файл `.jar` в папку `plugins/`
+3. Перезагрузите сервер
+4. Убедитесь, что установлен LuckPerms
+
+## Использование
+
+### Выдать права оператора:
+```bash
+/lp user <player> permission set operatorfromperms.all true
