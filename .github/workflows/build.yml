@@ -19,22 +19,22 @@ env:
 
 jobs:
   security-check:
-    name: 🔒 Проверка безопасности
+    name: Security Check
     runs-on: ubuntu-latest
     steps:
-      - name: 📥 Загружаем код
+      - name: Checkout code
         uses: actions/checkout@v4
         
-      - name: 🔍 Проверяем на уязвимости
+      - name: Security audit
         run: |
-          echo "🔒 Проверка безопасности проекта..."
-          echo "✅ Проверка структуры..."
-          [ -f "src/main/java/com/gordey9992/operatorfromperms/AuthManager.java" ] && echo "✅ AuthManager найден" || echo "❌ AuthManager отсутствует"
-          echo "🔒 Проверка хэширования паролей..."
-          grep -q "SHA-256" src/main/java/com/gordey9992/operatorfromperms/AuthManager.java && echo "✅ Пароли хэшируются" || echo "⚠️  Проверьте хэширование паролей"
+          echo "Security check..."
+          echo "Checking structure..."
+          [ -f "src/main/java/com/gordey9992/operatorfromperms/AuthManager.java" ] && echo "AuthManager found" || echo "AuthManager missing"
+          echo "Checking password hashing..."
+          grep -q "SHA-256" src/main/java/com/gordey9992/operatorfromperms/AuthManager.java && echo "Passwords are hashed" || echo "Check password hashing"
 
   build:
-    name: 🏗️ Сборка плагина
+    name: Build Plugin
     runs-on: ubuntu-latest
     needs: security-check
     
@@ -44,133 +44,133 @@ jobs:
         os: [ 'ubuntu-latest' ]
     
     steps:
-      - name: 📥 Загружаем код
+      - name: Checkout code
         uses: actions/checkout@v4
         
-      - name: ☕ Устанавливаем JDK ${{ matrix.java }}
+      - name: Setup JDK ${{ matrix.java }}
         uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java }}
           distribution: 'temurin'
           cache: 'maven'
           
-      - name: 📊 Информация о сборке
+      - name: Build info
         run: |
-          echo "🎯 Сборка: ${{ env.PLUGIN_NAME }} v${{ env.PLUGIN_VERSION }}"
-          echo "💻 ОС: ${{ matrix.os }}"
-          echo "☕ Java: ${{ matrix.java }}"
-          echo "📅 Время: $(date)"
-          echo "🔗 Коммит: ${{ github.sha }}"
+          echo "Building: ${{ env.PLUGIN_NAME }} v${{ env.PLUGIN_VERSION }}"
+          echo "OS: ${{ matrix.os }}"
+          echo "Java: ${{ matrix.java }}"
+          echo "Time: $(date)"
+          echo "Commit: ${{ github.sha }}"
           
-      - name: 🧹 Очищаем предыдущие сборки
+      - name: Clean previous builds
         run: mvn -B clean
         
-      - name: 📦 Компилируем код
+      - name: Compile code
         run: mvn -B compile
         
-      - name: 🔍 Проверяем зависимости
+      - name: Check dependencies
         run: mvn -B dependency:tree
         
-      - name: 🛠️ Собираем JAR
+      - name: Build JAR
         run: mvn -B package -DskipTests
         
-      - name: 📋 Анализируем сборку
+      - name: Analyze build
         run: |
           JAR_FILE=$(find target -name "*.jar" ! -name "*-javadoc.jar" ! -name "original-*.jar" | head -1)
           if [ -f "$JAR_FILE" ]; then
-            echo "✅ СБОРКА УСПЕШНА!"
-            echo "📦 Файл: $(basename $JAR_FILE)"
-            echo "📊 Размер: $(du -h $JAR_FILE | cut -f1)"
-            echo "🔍 MD5: $(md5sum $JAR_FILE | cut -d' ' -f1)"
-            echo "📝 Информация о плагине:"
+            echo "BUILD SUCCESSFUL!"
+            echo "File: $(basename $JAR_FILE)"
+            echo "Size: $(du -h $JAR_FILE | cut -f1)"
+            echo "MD5: $(md5sum $JAR_FILE | cut -d' ' -f1)"
+            echo "Plugin info:"
             unzip -p "$JAR_FILE" plugin.yml | grep -E "(name|version|main|description)" | while read line; do
               echo "   $line"
             done
           else
-            echo "❌ Сборка провалена!"
+            echo "Build failed!"
             exit 1
           fi
 
   quality:
-    name: ✅ Контроль качества
+    name: Quality Control
     runs-on: ubuntu-latest
     needs: build
     
     steps:
-      - name: 📥 Загружаем код
+      - name: Checkout code
         uses: actions/checkout@v4
         
-      - name: ☕ Устанавливаем JDK 21
+      - name: Setup JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
           
-      - name: 🔍 Проверяем код
+      - name: Code analysis
         run: |
-          echo "🔍 Анализ качества кода..."
-          echo "📊 Статистика:"
-          find src/main/java -name "*.java" | wc -l | xargs echo "📁 Java файлов:"
-          find src/main/resources -name "*.yml" | wc -l | xargs echo "📄 YAML файлов:"
+          echo "Code quality analysis..."
+          echo "Statistics:"
+          find src/main/java -name "*.java" | wc -l | xargs echo "Java files:"
+          find src/main/resources -name "*.yml" | wc -l | xargs echo "YAML files:"
           echo ""
-          echo "🔧 Проверка синтаксиса..."
-          mvn -B compile > /dev/null 2>&1 && echo "✅ Синтаксис корректен" || echo "❌ Ошибки компиляции"
+          echo "Syntax check..."
+          mvn -B compile > /dev/null 2>&1 && echo "Syntax correct" || echo "Compilation errors"
 
   artifacts:
-    name: 📦 Создание релиза
+    name: Create Release
     runs-on: ubuntu-latest
     needs: [build, quality]
     if: github.ref == 'refs/heads/main'
     
     steps:
-      - name: 📥 Загружаем код
+      - name: Checkout code
         uses: actions/checkout@v4
         
-      - name: ☕ Устанавливаем JDK 21
+      - name: Setup JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
           
-      - name: 🏗️ Финальная сборка
+      - name: Final build
         run: mvn -B clean package -DskipTests
         
-      - name: 📁 Готовим артефакты
+      - name: Prepare artifacts
         run: |
           mkdir -p release
           JAR_FILE=$(find target -name "*.jar" ! -name "*-javadoc.jar" ! -name "original-*.jar" | head -1)
           cp "$JAR_FILE" release/
-          cp -r src/main/resources/*.yml release/ 2>/dev/null || echo "Конфиги скопированы"
+          cp -r src/main/resources/*.yml release/ 2>/dev/null || echo "Configs copied"
           
-          # Создаем красивый README для релиза
+          # Create README for release
           cat > release/README.md << 'EOF'
-# 🚀 OperatorFromPerms v2.0.0
+# OperatorFromPerms v2.0.0
 
-## Что нового:
-- ✅ Система авторизации "Кошара 3000"
-- 🔐 Регистрация и вход с паролями
-- 💾 Функция "Запомнить меня" на 24 часа
-- 🎯 Полная интеграция с LuckPerms
+## New features:
+- Authorization system "Koshara 3000"
+- Registration and login with passwords
+- "Remember me" function for 24 hours
+- Full integration with LuckPerms
 
-## Команды авторизации:
-- `/регистрация <пароль> <подтверждение>` - регистрация
-- `/логин <пароль>` - вход
-- `/запомнить` - запомнить на 24 часа
+## Authorization commands:
+- /register <password> <confirm> - registration
+- /login <password> - login  
+- /remember - remember for 24 hours
 
-## Команды управления:
-- `/opf reload` - перезагрузить конфиги
-- `/opf check <игрок>` - проверить статус
+## Management commands:
+- /opf reload - reload configs
+- /opf check <player> - check status
 
-## Разработчики:
+## Developers:
 - gordey25690
 - DeepSeek
-- С идеей от Кошара 3000 🐱
+- With idea from Koshara 3000
 
-> Собрано: $(date)
-> Коммит: ${{ github.sha }}
+> Built: $(date)
+> Commit: ${{ github.sha }}
 EOF
 
-      - name: 🏷️ Создаем релиз
+      - name: Create release
         uses: softprops/action-gh-release@v1
         with:
           files: release/*
@@ -178,88 +178,88 @@ EOF
           tag_name: v2.0.0-${{ github.run_number }}
           name: "OperatorFromPerms v2.0.0 Build ${{ github.run_number }}"
           body: |
-            ## 🎉 Новая версия с системой авторизации!
-            
-            ### Что нового:
-            - 🔐 **Система авторизации "Кошара 3000"**
-            - 📝 **Регистрация** (/reg, /регистрация)
-            - 🔑 **Логин** (/login, /логин)  
-            - 💾 **Запомнить меня** на 24 часа
-            - 🎯 **Полная интеграция** с LuckPerms
-            
-            ### Команды:
-            ```bash
-            # Авторизация
-            /регистрация <пароль> <подтверждение>
-            /логин <пароль>
-            /запомнить
-            
-            # Управление
-            /opf reload
-            /opf check <игрок>
+            New version with authorization system!
+
+            ### What's new:
+            - Authorization system "Koshara 3000"
+            - Registration (/reg, /register)
+            - Login (/login, /log)  
+            - Remember me for 24 hours
+            - Full integration with LuckPerms
+
+            ### Commands:
             ```
-            
-            ### Разработчики:
+            # Authorization
+            /register <password> <confirm>
+            /login <password>
+            /remember
+
+            # Management
+            /opf reload
+            /opf check <player>
+            ```
+
+            ### Developers:
             - gordey25690
             - DeepSeek
-            - С идеей от Кошара 3000 🐱
+            - With idea from Koshara 3000
 
   deploy:
-    name: 🚀 Деплой
+    name: Deploy
     runs-on: ubuntu-latest
     needs: artifacts
     if: github.ref == 'refs/heads/main'
     
     steps:
-      - name: 📢 Уведомление об успехе
+      - name: Success notification
         run: |
-          echo "🎉 СБОРКА #${{ github.run_number }} ЗАВЕРШЕНА!"
-          echo "📦 РЕЛИЗ СОЗДАН: v2.0.0-${{ github.run_number }}"
-          echo "🔗 Ссылка: https://github.com/${{ github.repository }}/releases/tag/v2.0.0-${{ github.run_number }}"
+          echo "BUILD #${{ github.run_number }} COMPLETED!"
+          echo "RELEASE CREATED: v2.0.0-${{ github.run_number }}"
+          echo "Link: https://github.com/${{ github.repository }}/releases/tag/v2.0.0-${{ github.run_number }}"
           echo ""
-          echo "🚀 НОВЫЕ ФУНКЦИИ:"
-          echo "✅ Система авторизации Кошара 3000"
-          echo "✅ Регистрация и логин"
-          echo "✅ Запомнить меня на 24 часа"
-          echo "✅ Полная интеграция с LuckPerms"
+          echo "NEW FEATURES:"
+          echo "Authorization system Koshara 3000"
+          echo "Registration and login"
+          echo "Remember me for 24 hours"
+          echo "Full integration with LuckPerms"
 
   status:
-    name: 📊 Итоговый отчет
+    name: Final Report
     runs-on: ubuntu-latest
     needs: [security-check, build, quality, artifacts, deploy]
     if: always()
     
     steps:
-      - name: 📈 Генерируем отчет
+      - name: Generate report
         run: |
-          echo "# 📊 ОТЧЕТ О СБОРКЕ #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "# BUILD REPORT #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## 🎯 Результаты:" >> $GITHUB_STEP_SUMMARY
+          echo "## Results:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Этап | Статус |" >> $GITHUB_STEP_SUMMARY
+          echo "| Stage | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| 🔒 Проверка безопасности | ${{ needs.security-check.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| 🏗️ Сборка плагина | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| ✅ Контроль качества | ${{ needs.quality.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| 📦 Создание релиза | ${{ needs.artifacts.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| 🚀 Деплой | ${{ needs.deploy.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Check | ${{ needs.security-check.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Plugin | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Quality Control | ${{ needs.quality.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Create Release | ${{ needs.artifacts.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Deploy | ${{ needs.deploy.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [ "${{ needs.artifacts.result }}" == "success" ]; then
-            echo "## 🎉 УСПЕХ!" >> $GITHUB_STEP_SUMMARY
+            echo "## SUCCESS!" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**OperatorFromPerms v2.0.0** успешно собран и готов к использованию!" >> $GITHUB_STEP_SUMMARY
+            echo "**OperatorFromPerms v2.0.0** successfully built and ready!" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### 🆕 Новые функции:" >> $GITHUB_STEP_SUMMARY
-            echo "- 🔐 Система авторизации \"Кошара 3000\"" >> $GITHUB_STEP_SUMMARY
-            echo "- 📝 Регистрация (/reg, /регистрация)" >> $GITHUB_STEP_SUMMARY
-            echo "- 🔑 Логин (/login, /логин)" >> $GITHUB_STEP_SUMMARY
-            echo "- 💾 Запомнить меня на 24 часа" >> $GITHUB_STEP_SUMMARY
+            echo "### New features:" >> $GITHUB_STEP_SUMMARY
+            echo "- Authorization system \"Koshara 3000\"" >> $GITHUB_STEP_SUMMARY
+            echo "- Registration (/reg, /register)" >> $GITHUB_STEP_SUMMARY
+            echo "- Login (/login, /log)" >> $GITHUB_STEP_SUMMARY
+            echo "- Remember me for 24 hours" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### 📥 Скачать:" >> $GITHUB_STEP_SUMMARY
-            echo "Перейдите в [Releases](https://github.com/${{ github.repository }}/releases) чтобы скачать плагин" >> $GITHUB_STEP_SUMMARY
+            echo "### Download:" >> $GITHUB_STEP_SUMMARY
+            echo "Go to [Releases](https://github.com/${{ github.repository }}/releases) to download plugin" >> $GITHUB_STEP_SUMMARY
           else
-            echo "## ❌ Есть проблемы" >> $GITHUB_STEP_SUMMARY
+            echo "## Issues detected" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Проверьте логи для диагностики проблем" >> $GITHUB_STEP_SUMMARY
+            echo "Check logs for diagnostics" >> $GITHUB_STEP_SUMMARY
           fi
