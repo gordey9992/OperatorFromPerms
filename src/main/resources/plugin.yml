@@ -1,8 +1,8 @@
 name: OperatorFromPerms
-version: 1.0.0
+version: 2.0.0
 main: com.gordey9992.operatorfromperms.OperatorFromPerms
 api-version: 1.21
-description: Дает права оператора через разрешение LuckPerms
+description: Дает права оператора через разрешение LuckPerms + система авторизации от Кошара 3000
 authors: [gordey25690, DeepSeek]
 website: https://github.com/gordey9992/OperatorFromPerms
 depend: [LuckPerms]
@@ -13,6 +13,18 @@ commands:
     aliases: [opf]
     permission: operatorfromperms.admin
     usage: /<command> <reload|check|version>
+  register:
+    description: Регистрация в системе
+    aliases: [reg, регистр, рег, регистрация]
+    usage: /<command> <пароль> <подтверждение>
+  login:
+    description: Вход в систему
+    aliases: [log, l, логин, л, auth]
+    usage: /<command> <пароль>
+  remember:
+    description: Запомнить меня на 24 часа
+    aliases: [запомнить, rememberme]
+    usage: /<command>
 
 permissions:
   operatorfromperms.admin:
