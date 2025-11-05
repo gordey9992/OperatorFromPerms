@@ -1,0 +1,46 @@
+# Настройки плагина OperatorFromPerms
+# Файл расположение: plugins/OperatorFromPerms/config.yml
+
+# Основные настройки
+settings:
+  # Разрешение, которое дает права оператора
+  operator-permission: "operatorfromperms.all"
+  
+  # Автоматически проверять права при входе игрока
+  check-on-join: true
+  
+  # Автоматически проверять права при изменении разрешений LuckPerms
+  check-on-permission-change: true
+  
+  # Задержка перед проверкой прав при входе (в тиках, 20 тиков = 1 секунда)
+  check-delay-ticks: 20
+  
+  # Логировать выдачу/забор прав оператора в консоль
+  log-to-console: true
+  
+  # Безопасный режим - не давать права оператора игрокам с определенными именами
+  safe-mode: true
+  blocked-usernames:
+    - "Notch"
+    - "Herobrine"
+    - "Admin"
+    - "Owner"
+
+# Настройки обновления прав
+update-settings:
+  # Обновлять права оператора при смене мира
+  update-on-world-change: true
+  
+  # Обновлять права оператора при получении/потере группы
+  update-on-group-change: true
+  
+  # Принудительно обновлять права всех онлайн-игроков при перезагрузке плагина
+  update-all-on-reload: true
+
+# Экспериментальные функции (использовать на свой страх и риск)
+experimental:
+  # Синхронизировать права оператора с разрешением (опасно!)
+  sync-op-with-permission: false
+  
+  # Автоматически исправлять расхождения между разрешением и правами оператора
+  auto-fix-discrepancies: true
