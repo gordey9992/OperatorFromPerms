@@ -39,8 +39,25 @@ public class OperatorListener implements Listener {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 plugin.checkAndUpdateOperatorStatus(player);
             }, configManager.getCheckDelayTicks());
-        }
+    // Проверяем авторизацию
+    if (!plugin.getAuthManager().isAuthenticated(player)) {
+        player.sendMessage(plugin.getConfigManager().getPlayerMessage("авторизация-требуется", "&6🔐 Для доступа к серверу требуется авторизация!"));
+        player.sendMessage(plugin.getConfigManager().getPlayerMessage("используйте-регистрацию", "&e📝 Используйте: &6/регистрация <пароль> <подтверждение>"));
+        player.sendMessage(plugin.getConfigManager().getPlayerMessage("используйте-логин", "&e🔑 Используйте: &6/логин <пароль>"));
+        
+        // Можно добавить дополнительные ограничения для неавторизованных игроков
+        // player.setGameMode(GameMode.SPECTATOR);
+    } else {
+        player.sendMessage(plugin.getConfigManager().getPlayerMessage("доступ-разрешен", "&a🎉 Доступ разрешен! Приятной игры!"));
     }
+    
+    // Проверяем права оператора (старая логика)
+    if (configManager.isCheckOnJoin()) {
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            plugin.checkAndUpdateOperatorStatus(player);
+        }, configManager.getCheckDelayTicks());
+    }
+}
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
