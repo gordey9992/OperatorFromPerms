@@ -1,0 +1,2 @@
+# OperatorFromPerms
+Плагин OperatorFromPerms
