@@ -1,459 +1,341 @@
-name: 🏗️ Сборка OperatorFromPerms
+name: Сборка OperatorFromPerms
 
 on:
   push:
-    branches: [ "главная", "основная", "разработка" ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ "главная", "основная" ]
+    branches: [ "main", "master" ]
   workflow_dispatch:
     inputs:
-      тип_сборки:
-        description: 'Выберите тип сборки'
+      build_type:
+        description: 'Тип сборки'
         required: true
-        default: 'релиз'
+        default: 'release'
         type: choice
         options:
-        - 'релиз'
-        - 'тест'
-        - 'разработка'
+        - 'release'
+        - 'test'
+        - 'development'
 
 env:
-  НАЗВАНИЕ_ПЛАГИНА: 'OperatorFromPerms'
-  ВЕРСИЯ_JAVA: '21'
-  ВЕРСИЯ_ПЛАГИНА: '2.0.0'
+  PLUGIN_NAME: 'OperatorFromPerms'
+  JAVA_VERSION: '21'
+  PLUGIN_VERSION: '2.0.0'
 
 jobs:
-  подготовка:
-    name: 🛠️ Подготовка к сборке
+  preparation:
+    name: Подготовка к сборке
     runs-on: ubuntu-latest
     
     steps:
-    - name: 📥 Получить исходный код
+    - name: Получить исходный код
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
-    - name: 📊 Информация о сборке
+    - name: Информация о сборке
       run: |
-        echo "=== НАЧАЛО СБОРКИ ==="
-        echo "📦 Плагин: ${{ env.НАЗВАНИЕ_ПЛАГИНА }}"
-        echo "🔢 Версия: ${{ env.ВЕРСИЯ_ПЛАГИНА }}"
-        echo "☕ Java: ${{ env.ВЕРСИЯ_JAVA }}"
-        echo "🏷️ Коммит: ${{ github.sha }}"
-        echo "🎯 Ветка: ${{ github.ref }}"
-        echo "👤 Запустил: ${{ github.actor }}"
-        echo "📅 Время: $(date)"
-        echo "===================="
+        echo "НАЧАЛО СБОРКИ"
+        echo "Плагин: ${{ env.PLUGIN_NAME }}"
+        echo "Версия: ${{ env.PLUGIN_VERSION }}"
+        echo "Java: ${{ env.JAVA_VERSION }}"
+        echo "Коммит: ${{ github.sha }}"
+        echo "Ветка: ${{ github.ref }}"
+        echo "Время: $(date)"
 
-  проверка-структуры:
-    name: 🔍 Проверка структуры проекта
+  structure-check:
+    name: Проверка структуры проекта
     runs-on: ubuntu-latest
-    needs: подготовка
+    needs: preparation
     
     steps:
-    - name: 📥 Получить код
+    - name: Получить код
       uses: actions/checkout@v4
 
-    - name: 📁 Проверить файлы проекта
+    - name: Проверить файлы проекта
       run: |
-        echo "🔍 ПРОВЕРКА СТРУКТУРЫ ПРОЕКТА"
-        echo "=============================="
+        echo "ПРОВЕРКА СТРУКТУРЫ ПРОЕКТА"
         
-        # Обязательные файлы
-        ОБЯЗАТЕЛЬНЫЕ_ФАЙЛЫ=(
+        REQUIRED_FILES=(
           "pom.xml"
           "src/main/resources/plugin.yml"
           "src/main/resources/config.yml" 
           "src/main/resources/messages.yml"
-          "LICENSE"
-          "README.md"
         )
         
-        for файл in "${ОБЯЗАТЕЛЬНЫЕ_ФАЙЛЫ[@]}"; do
-          if [ -f "$файл" ]; then
-            echo "✅ $файл - найден"
+        for file in "${REQUIRED_FILES[@]}"; do
+          if [ -f "$file" ]; then
+            echo "OK: $file"
           else
-            echo "❌ $файл - ОТСУТСТВУЕТ"
+            echo "ERROR: $file не найден"
             exit 1
           fi
         done
         
-        # Проверка исходного кода
-        echo ""
-        echo "📦 ПРОВЕРКА ИСХОДНОГО КОДА"
-        echo "=========================="
-        
         if [ -d "src/main/java/com/gordey9992/operatorfromperms" ]; then
-          КОЛИЧЕСТВО_JAVA=$(find src/main/java/com/gordey9992/operatorfromperms -name "*.java" | wc -l)
-          echo "✅ Папка с кодом найдена"
-          echo "📁 Java файлов: $КОЛИЧЕСТВО_JAVA"
-          
-          # Список основных классов
-          echo "📋 Основные классы:"
-          find src/main/java/com/gordey9992/operatorfromperms -name "*.java" -exec basename {} \; | while read класс; do
-            echo "   📄 $класс"
-          done
+          JAVA_COUNT=$(find src/main/java/com/gordey9992/operatorfromperms -name "*.java" | wc -l)
+          echo "Java файлов: $JAVA_COUNT"
         else
-          echo "❌ Папка с исходным кодом не найдена"
+          echo "ERROR: Папка с исходным кодом не найдена"
           exit 1
         fi
-        
-        # Проверка ресурсов
-        echo ""
-        echo "🎨 ПРОВЕРКА РЕСУРСОВ"
-        echo "==================="
-        КОЛИЧЕСТВО_YAML=$(find src/main/resources -name "*.yml" | wc -l)
-        echo "📄 YAML файлов: $КОЛИЧЕСТВО_YAML"
-        
-        echo ""
-        echo "🎉 СТРУКТУРА ПРОЕКТА В ПОРЯДКЕ!"
 
-  установка-зависимостей:
-    name: 📦 Установка зависимостей
+  dependencies:
+    name: Установка зависимостей
     runs-on: ubuntu-latest
-    needs: проверка-структуры
+    needs: structure-check
     
     steps:
-    - name: 📥 Получить код
+    - name: Получить код
       uses: actions/checkout@v4
 
-    - name: ☕ Установить Java ${{ env.ВЕРСИЯ_JAVA }}
+    - name: Установить Java
       uses: actions/setup-java@v4
       with:
-        java-version: ${{ env.ВЕРСИЯ_JAVA }}
+        java-version: ${{ env.JAVA_VERSION }}
         distribution: 'temurin'
         cache: 'maven'
 
-    - name: 🧹 Очистить предыдущие сборки
+    - name: Очистить предыдущие сборки
       run: mvn -B clean
 
-    - name: 📥 Загрузить зависимости Maven
+    - name: Загрузить зависимости
       run: mvn -B dependency:resolve
 
-    - name: 📊 Информация о зависимостях
-      run: |
-        echo "📦 ЗАВИСИМОСТИ ПРОЕКТА"
-        echo "===================="
-        mvn -B dependency:tree | grep -E "(\[INFO\]|\.jar)" | head -20
-
-  компиляция:
-    name: ⚙️ Компиляция кода
+  compilation:
+    name: Компиляция кода
     runs-on: ubuntu-latest
-    needs: установка-зависимостей
+    needs: dependencies
     
     steps:
-    - name: 📥 Получить код
+    - name: Получить код
       uses: actions/checkout@v4
 
-    - name: ☕ Установить Java
+    - name: Установить Java
       uses: actions/setup-java@v4
       with:
-        java-version: ${{ env.ВЕРСИЯ_JAVA }}
+        java-version: ${{ env.JAVA_VERSION }}
         distribution: 'temurin'
 
-    - name: 🔨 Компилировать Java код
+    - name: Компилировать код
       run: mvn -B compile
 
-    - name: ✅ Проверить компиляцию
+    - name: Проверить компиляцию
       run: |
-        echo "🔍 ПРОВЕРКА КОМПИЛЯЦИИ"
         if [ -d "target/classes" ]; then
-          КОЛИЧЕСТВО_КЛАССОВ=$(find target/classes -name "*.class" | wc -l)
-          echo "✅ Компиляция успешна"
-          echo "📁 Скомпилированных классов: $КОЛИЧЕСТВО_КЛАССОВ"
+          CLASS_COUNT=$(find target/classes -name "*.class" | wc -l)
+          echo "Компиляция успешна"
+          echo "Скомпилированных классов: $CLASS_COUNT"
         else
-          echo "❌ Ошибка компиляции"
+          echo "Ошибка компиляции"
           exit 1
         fi
 
-  сборка:
-    name: 🏗️ Сборка JAR файла
+  build:
+    name: Сборка JAR файла
     runs-on: ubuntu-latest
-    needs: компиляция
+    needs: compilation
     
     steps:
-    - name: 📥 Получить код
+    - name: Получить код
       uses: actions/checkout@v4
 
-    - name: ☕ Установить Java
+    - name: Установить Java
       uses: actions/setup-java@v4
       with:
-        java-version: ${{ env.ВЕРСИЯ_JAVA }}
+        java-version: ${{ env.JAVA_VERSION }}
         distribution: 'temurin'
 
-    - name: 🛠️ Собрать JAR файл
+    - name: Собрать JAR файл
       run: mvn -B clean package -DskipTests
 
-    - name: 📏 Анализ сборки
+    - name: Анализ сборки
       run: |
-        echo "📊 АНАЛИЗ СОБРАННОГО JAR"
-        echo "========================"
+        JAR_FILE=$(find target -name "*.jar" ! -name "*-javadoc.jar" ! -name "original-*.jar" | head -1)
         
-        JAR_ФАЙЛ=$(find target -name "*.jar" ! -name "*-javadoc.jar" ! -name "original-*.jar" | head -1)
-        
-        if [ -f "$JAR_ФАЙЛ" ]; then
-          echo "✅ JAR файл создан: $(basename $JAR_ФАЙЛ)"
-          echo "💾 Размер: $(du -h "$JAR_ФАЙЛ" | cut -f1)"
-          echo "🔍 MD5: $(md5sum "$JAR_ФАЙЛ" | cut -d' ' -f1)"
-          
-          echo ""
-          echo "📝 ИНФОРМАЦИЯ О ПЛАГИНЕ:"
-          echo "========================"
-          unzip -p "$JAR_ФАЙЛ" plugin.yml | while read строка; do
-            echo "   $строка"
-          done
+        if [ -f "$JAR_FILE" ]; then
+          echo "JAR файл создан: $(basename $JAR_FILE)"
+          echo "Размер: $(du -h "$JAR_FILE" | cut -f1)"
+          echo "MD5: $(md5sum "$JAR_FILE" | cut -d' ' -f1)"
         else
-          echo "❌ JAR файл не найден"
+          echo "JAR файл не найден"
           exit 1
         fi
 
-  проверка-качества:
-    name: ✅ Контроль качества
+  quality:
+    name: Контроль качества
     runs-on: ubuntu-latest
-    needs: сборка
+    needs: build
     
     steps:
-    - name: 📥 Получить код
+    - name: Получить код
       uses: actions/checkout@v4
 
-    - name: 🔍 Анализ кода
+    - name: Анализ кода
       run: |
-        echo "✅ КОНТРОЛЬ КАЧЕСТВА КОДА"
-        echo "========================"
+        echo "КОНТРОЛЬ КАЧЕСТВА КОДА"
         
-        echo "📊 СТАТИСТИКА:"
-        echo "============="
-        JAVA_ФАЙЛОВ=$(find src/main/java -name "*.java" | wc -l)
-        YAML_ФАЙЛОВ=$(find src/main/resources -name "*.yml" | wc -l)
-        echo "📁 Java файлов: $JAVA_ФАЙЛОВ"
-        echo "📄 YAML файлов: $YAML_ФАЙЛОВ"
+        JAVA_FILES=$(find src/main/java -name "*.java" | wc -l)
+        YAML_FILES=$(find src/main/resources -name "*.yml" | wc -l)
+        echo "Java файлов: $JAVA_FILES"
+        echo "YAML файлов: $YAML_FILES"
         
-        echo ""
-        echo "🔎 ПРОВЕРКА СТИЛЯ:"
-        echo "================="
-        
-        # Поиск TODO и FIXME
-        echo "📋 НАЙДЕНЫ TODO/FIXME:"
-        find src/main/java -name "*.java" -exec grep -l "TODO\|FIXME" {} \; | while read файл; do
-          echo "   ⚠️  $(basename $файл)"
+        echo "Поиск TODO/FIXME:"
+        find src/main/java -name "*.java" -exec grep -l "TODO\|FIXME" {} \; | while read file; do
+          echo "Найдено в: $(basename $file)"
         done
-        
-        echo ""
-        echo "🔧 ПРОВЕРКА СИНТАКСИСА:"
-        echo "======================"
-        mvn -B compile > /dev/null 2>&1 && echo "✅ Синтаксис Java корректен" || echo "❌ Ошибки синтаксиса"
 
-  создание-артефактов:
-    name: 📦 Создание артефактов
+  artifacts:
+    name: Создание артефактов
     runs-on: ubuntu-latest
-    needs: [сборка, проверка-качества]
+    needs: [build, quality]
     
     steps:
-    - name: 📥 Получить код
+    - name: Получить код
       uses: actions/checkout@v4
 
-    - name: ☕ Установить Java
+    - name: Установить Java
       uses: actions/setup-java@v4
       with:
-        java-version: ${{ env.ВЕРСИЯ_JAVA }}
+        java-version: ${{ env.JAVA_VERSION }}
         distribution: 'temurin'
 
-    - name: 🏗️ Финальная сборка
+    - name: Финальная сборка
       run: mvn -B clean package -DskipTests
 
-    - name: 📁 Подготовка артефактов
+    - name: Подготовка артефактов
       run: |
-        echo "📦 ПОДГОТОВКА АРТЕФАКТОВ"
-        echo "========================"
+        mkdir -p artifacts
         
-        # Создаем папку для артефактов
-        mkdir -p артефакты
-        echo "✅ Создана папка 'артефакты'"
+        JAR_FILE=$(find target -name "*.jar" ! -name "*-javadoc.jar" ! -name "original-*.jar" | head -1)
+        cp "$JAR_FILE" artifacts/
+        cp src/main/resources/*.yml artifacts/ 2>/dev/null || echo "Конфиги скопированы"
         
-        # Копируем JAR файл
-        JAR_ФАЙЛ=$(find target -name "*.jar" ! -name "*-javadoc.jar" ! -name "original-*.jar" | head -1)
-        cp "$JAR_ФАЙЛ" артефакты/
-        echo "✅ JAR файл скопирован: $(basename $JAR_ФАЙЛ)"
-        
-        # Копируем конфигурационные файлы
-        cp src/main/resources/*.yml артефакты/ 2>/dev/null || echo "ℹ️ Конфиги скопированы"
-        echo "✅ Конфигурационные файлы скопированы"
-        
-        # Создаем информацию о сборке
-        cat > артефакты/информация.txt << EOF
-🏗️ OperatorFromPerms - Информация о сборке
-==========================================
+        cat > artifacts/info.txt << 'EOF'
+OperatorFromPerms - Информация о сборке
 
-📊 ОСНОВНАЯ ИНФОРМАЦИЯ:
-• Название: ${{ env.НАЗВАНИЕ_ПЛАГИНА }}
-• Версия: ${{ env.ВЕРСИЯ_ПЛАГИНА }}
-• Сборка: #${{ github.run_number }}
-• Коммит: ${{ github.sha }}
-• Ветка: ${{ github.ref_name }}
-• Дата: $(date)
+ОСНОВНАЯ ИНФОРМАЦИЯ:
+- Название: OperatorFromPerms
+- Версия: 2.0.0
+- Сборка: ${{ github.run_number }}
+- Коммит: ${{ github.sha }}
+- Ветка: ${{ github.ref_name }}
+- Дата: $(date)
 
-📦 СОДЕРЖИМОЕ:
-• $(basename $JAR_ФАЙЛ) - собранный плагин
-• config.yml - конфигурация
-• messages.yml - сообщения
-• plugin.yml - описание плагина
+СОДЕРЖИМОЕ:
+- $(basename $JAR_FILE) - собранный плагин
+- config.yml - конфигурация
+- messages.yml - сообщения
+- plugin.yml - описание плагина
 
-🚀 УСТАНОВКА:
+УСТАНОВКА:
 1. Скопируйте JAR файл в папку plugins/
 2. Перезагрузите сервер
 3. Настройте конфиги в plugins/OperatorFromPerms/
 
-🎯 КОМАНДЫ:
-• /opf reload - перезагрузить конфиги
-• /opf check <игрок> - проверить статус
-• /регистрация - регистрация в системе
-• /логин - вход в систему
+КОМАНДЫ:
+- /opf reload - перезагрузить конфиги
+- /opf check <игрок> - проверить статус
+- /регистрация - регистрация в системе
+- /логин - вход в систему
 
-👥 РАЗРАБОТЧИКИ:
-• gordey25690
-• DeepSeek
-• С идеей от Кошара 3000 🐱
+РАЗРАБОТЧИКИ:
+- gordey25690
+- DeepSeek
+- С идеей от Кошара 3000
 
-📄 ЛИЦЕНЗИЯ: MIT
+ЛИЦЕНЗИЯ: MIT
 EOF
-        echo "✅ Информация о сборке создана"
         
-        # Создаем краткую инструкцию
-        cat > артефакты/быстрый-старт.txt << EOF
-🚀 БЫСТРЫЙ СТАРТ
+        cat > artifacts/quick-start.txt << 'EOF'
+БЫСТРЫЙ СТАРТ
 
 1. УСТАНОВКА:
-   📥 Поместите JAR в plugins/
-   🔄 Перезагрузите сервер
+   - Поместите JAR в plugins/
+   - Перезагрузите сервер
 
 2. АВТОРИЗАЦИЯ:
-   📝 /регистрация <пароль> <подтверждение>
-   🔑 /логин <пароль>
-   💾 /запомнить - на 24 часа
+   - /регистрация <пароль> <подтверждение>
+   - /логин <пароль>
+   - /запомнить - на 24 часа
 
 3. ОПЕРАТОР:
-   👑 /lp user <игрок> permission set operatorfromperms.all true
+   - /lp user <игрок> permission set operatorfromperms.all true
 
-📞 Поддержка: https://github.com/gordey9992/OperatorFromPerms
+Поддержка: https://github.com/gordey9992/OperatorFromPerms
 EOF
-        echo "✅ Краткая инструкция создана"
-        
-        echo ""
-        echo "📋 ФИНАЛЬНАЯ ПРОВЕРКА:"
-        echo "====================="
-        echo "📁 Содержимое папки 'артефакты':"
-        ls -la артефакты/
-        echo ""
-        echo "📏 Размеры файлов:"
-        du -h артефакты/*
 
-    - name: 📤 Загрузка артефактов
+    - name: Загрузка артефактов
       uses: actions/upload-artifact@v4
       with:
-        name: OperatorFromPerms-v${{ env.ВЕРСИЯ_ПЛАГИНА }}-${{ github.run_number }}
-        path: артефакты/
+        name: OperatorFromPerms-v${{ env.PLUGIN_VERSION }}-${{ github.run_number }}
+        path: artifacts/
         retention-days: 30
-        overwrite: true
 
-  создание-релиза:
-    name: 🚀 Создание релиза
+  release:
+    name: Создание релиза
     runs-on: ubuntu-latest
-    needs: создание-артефактов
-    if: github.ref == 'refs/heads/главная' && inputs.тип_сборки == 'релиз'
+    needs: artifacts
+    if: github.ref == 'refs/heads/main' && inputs.build_type == 'release'
     
     steps:
-    - name: 🏷️ Создать релиз GitHub
+    - name: Создать релиз GitHub
       uses: softprops/action-gh-release@v1
       with:
-        files: артефакты/*
+        files: artifacts/*
         generate_release_notes: true
-        tag_name: v${{ env.ВЕРСИЯ_ПЛАГИНА }}-${{ github.run_number }}
-        name: "OperatorFromPerms v${{ env.ВЕРСИЯ_ПЛАГИНА }}"
+        tag_name: v${{ env.PLUGIN_VERSION }}-${{ github.run_number }}
+        name: "OperatorFromPerms v${{ env.PLUGIN_VERSION }}"
         body: |
-          ## 🎉 Новая версия с системой авторизации!
-          
-          ### Что нового:
-          - 🔐 **Система авторизации "Кошара 3000"**
-          - 📝 **Регистрация** (/reg, /регистрация)
-          - 🔑 **Логин** (/login, /логин)  
-          - 💾 **Запомнить меня** на 24 часа
-          - 🎯 **Полная интеграция** с LuckPerms
-          
-          ### Основные команды:
-          ```bash
-          # Авторизация
+          Новая версия с системой авторизации
+
+          Что нового:
+          - Система авторизации
+          - Регистрация и логин
+          - Запомнить меня на 24 часа
+          - Полная интеграция с LuckPerms
+
+          Команды:
           /регистрация <пароль> <подтверждение>
           /логин <пароль>
           /запомнить
-          
-          # Управление
           /opf reload
           /opf check <игрок>
-          
-          # Права оператора
-          /lp user <игрок> permission set operatorfromperms.all true
-          ```
-          
-          ### Разработчики:
+
+          Разработчики:
           - gordey25690
           - DeepSeek
-          - С идеей от Кошара 3000 🐱
+          - С идеей от Кошара 3000
 
-  итоговый-отчет:
-    name: 📊 Итоговый отчет
+  report:
+    name: Итоговый отчет
     runs-on: ubuntu-latest
-    needs: [подготовка, проверка-структуры, установка-зависимостей, компиляция, сборка, проверка-качества, создание-артефактов]
+    needs: [preparation, structure-check, dependencies, compilation, build, quality, artifacts]
     if: always()
     
     steps:
-    - name: 📈 Создать отчет
+    - name: Создать отчет
       run: |
-        echo "# 📊 ОТЧЕТ О СБОРКЕ #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+        echo "ОТЧЕТ О СБОРКЕ #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         
-        echo "## 🎯 РЕЗУЛЬТАТЫ ВЫПОЛНЕНИЯ:" >> $GITHUB_STEP_SUMMARY
+        echo "РЕЗУЛЬТАТЫ ВЫПОЛНЕНИЯ:" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Этап | Статус | Время |" >> $GITHUB_STEP_SUMMARY
-        echo "|------|--------|-------|" >> $GITHUB_STEP_SUMMARY
-        echo "| 🛠️ Подготовка | ${{ needs.подготовка.result }} | ${{ needs.подготовка.time }} |" >> $GITHUB_STEP_SUMMARY
-        echo "| 🔍 Проверка структуры | ${{ needs.проверка-структуры.result }} | ${{ needs.проверка-структуры.time }} |" >> $GITHUB_STEP_SUMMARY
-        echo "| 📦 Установка зависимостей | ${{ needs.установка-зависимостей.result }} | ${{ needs.установка-зависимостей.time }} |" >> $GITHUB_STEP_SUMMARY
-        echo "| ⚙️ Компиляция | ${{ needs.компиляция.result }} | ${{ needs.компиляция.time }} |" >> $GITHUB_STEP_SUMMARY
-        echo "| 🏗️ Сборка JAR | ${{ needs.сборка.result }} | ${{ needs.сборка.time }} |" >> $GITHUB_STEP_SUMMARY
-        echo "| ✅ Контроль качества | ${{ needs.проверка-качества.result }} | ${{ needs.проверка-качества.time }} |" >> $GITHUB_STEP_SUMMARY
-        echo "| 📦 Создание артефактов | ${{ needs.создание-артефактов.result }} | ${{ needs.создание-артефактов.time }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Этап | Статус |" >> $GITHUB_STEP_SUMMARY
+        echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Подготовка | ${{ needs.preparation.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Проверка структуры | ${{ needs.structure-check.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Установка зависимостей | ${{ needs.dependencies.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Компиляция | ${{ needs.compilation.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Сборка JAR | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Контроль качества | ${{ needs.quality.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Создание артефактов | ${{ needs.artifacts.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         
-        if [ "${{ needs.создание-артефактов.result }}" == "success" ]; then
-          echo "## 🎉 УСПЕХ!" >> $GITHUB_STEP_SUMMARY
+        if [ "${{ needs.artifacts.result }}" == "success" ]; then
+          echo "УСПЕХ!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**${{ env.НАЗВАНИЕ_ПЛАГИНА }} v${{ env.ВЕРСИЯ_ПЛАГИНА }}** успешно собран!" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📥 Скачать артефакты:" >> $GITHUB_STEP_SUMMARY
-          echo "Перейдите во вкладку **Actions** → выберите эту сборку → раздел **Artifacts**" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🆕 Новые возможности:" >> $GITHUB_STEP_SUMMARY
-          echo "- 🔐 Система авторизации с регистрацией и логином" >> $GITHUB_STEP_SUMMARY
-          echo "- 💾 Функция 'Запомнить меня' на 24 часа" >> $GITHUB_STEP_SUMMARY
-          echo "- 🎯 Автоматическая выдача прав оператора" >> $GITHUB_STEP_SUMMARY
-          echo "- 📝 Полностью настраиваемые сообщения" >> $GITHUB_STEP_SUMMARY
+          echo "OperatorFromPerms v${{ env.PLUGIN_VERSION }} успешно собран!" >> $GITHUB_STEP_SUMMARY
         else
-          echo "## ❌ ВНИМАНИЕ!" >> $GITHUB_STEP_SUMMARY
+          echo "ВНИМАНИЕ!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "В процессе сборки возникли проблемы. Проверьте логи для диагностики." >> $GITHUB_STEP_SUMMARY
-        fi
-        
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "---" >> $GITHUB_STEP_SUMMARY
-        echo "*Собрано: $(date)*" >> $GITHUB_STEP_SUMMARY
-
-    - name: 🔔 Уведомление о завершении
-      run: |
-        if [ "${{ needs.создание-артефактов.result }}" == "success" ]; then
-          echo "🎉 СБОРКА #${{ github.run_number }} ЗАВЕРШЕНА УСПЕШНО!"
-          echo "📦 АРТЕФАКТЫ ГОТОВЫ К СКАЧИВАНИЮ"
-          echo "🚀 ВЕРСИЯ: ${{ env.ВЕРСИЯ_ПЛАГИНА }}"
-        else
-          echo "❌ СБОРКА #${{ github.run_number }} ЗАВЕРШЕНА С ОШИБКАМИ"
-          echo "🔍 ПРОВЕРЬТЕ ЛОГИ ДЛЯ ДИАГНОСТИКИ"
+          echo "В процессе сборки возникли проблемы." >> $GITHUB_STEP_SUMMARY
         fi
