@@ -34,30 +34,24 @@ public class OperatorListener implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        
+        // Проверяем авторизацию
+        if (!plugin.getAuthManager().isAuthenticated(player)) {
+            player.sendMessage(configManager.getPlayerMessage("авторизация-требуется", "Для доступа к серверу требуется авторизация!"));
+            player.sendMessage(configManager.getPlayerMessage("используйте-регистрацию", "Используйте: /регистрация <пароль> <подтверждение>"));
+            player.sendMessage(configManager.getPlayerMessage("используйте-логин", "Используйте: /логин <пароль>"));
+        } else {
+            player.sendMessage(configManager.getPlayerMessage("доступ-разрешен", "Доступ разрешен! Приятной игры!"));
+        }
+        
+        // Проверяем права оператора
         if (configManager.isCheckOnJoin()) {
-            Player player = event.getPlayer();
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 plugin.checkAndUpdateOperatorStatus(player);
             }, configManager.getCheckDelayTicks());
-    // Проверяем авторизацию
-    if (!plugin.getAuthManager().isAuthenticated(player)) {
-        player.sendMessage(plugin.getConfigManager().getPlayerMessage("авторизация-требуется", "&6🔐 Для доступа к серверу требуется авторизация!"));
-        player.sendMessage(plugin.getConfigManager().getPlayerMessage("используйте-регистрацию", "&e📝 Используйте: &6/регистрация <пароль> <подтверждение>"));
-        player.sendMessage(plugin.getConfigManager().getPlayerMessage("используйте-логин", "&e🔑 Используйте: &6/логин <пароль>"));
-        
-        // Можно добавить дополнительные ограничения для неавторизованных игроков
-        // player.setGameMode(GameMode.SPECTATOR);
-    } else {
-        player.sendMessage(plugin.getConfigManager().getPlayerMessage("доступ-разрешен", "&a🎉 Доступ разрешен! Приятной игры!"));
+        }
     }
-    
-    // Проверяем права оператора (старая логика)
-    if (configManager.isCheckOnJoin()) {
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            plugin.checkAndUpdateOperatorStatus(player);
-        }, configManager.getCheckDelayTicks());
-    }
-}
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
@@ -69,7 +63,7 @@ public class OperatorListener implements Listener {
         if (configManager.updateOnWorldChange()) {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 plugin.checkAndUpdateOperatorStatus(event.getPlayer());
-            }, 5L); // Небольшая задержка после смены мира
+            }, 5L);
         }
     }
 
@@ -92,7 +86,6 @@ public class OperatorListener implements Listener {
 
     private void checkNodeChange(String nodeKey) {
         if (nodeKey.equals(configManager.getOperatorPermission())) {
-            // Нашли изменение нашего разрешения, обновляем всех онлайн-игроков
             Bukkit.getScheduler().runTask(plugin, () -> {
                 for (Player player : Bukkit.getOnlinePlayers()) {
                     plugin.checkAndUpdateOperatorStatus(player);
